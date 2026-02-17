@@ -3,25 +3,208 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>World Language Phylogenetic Graph</title>
+  <title>Phaistos Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #000; overflow: hidden; }
-    canvas { display: block; touch-action: none; }
-    #info {
-      position: absolute;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      color: rgba(255,255,255,0.2);
-      font-size: 13px;
-      letter-spacing: 0.5px;
+    html { scroll-behavior: smooth; }
+    body {
+      background: #000;
+      color: #fff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+    canvas { display: block; touch-action: pan-y; }
+
+    /* Fixed graph background */
+    #graph-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    /* Hero section — full viewport, centered text over graph */
+    #hero {
+      position: relative;
+      z-index: 2;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      padding-left: clamp(40px, 6vw, 100px);
       pointer-events: none;
       user-select: none;
-      font-family: 'Courier New', monospace;
     }
-    #tooltip {
+    #hero-title {
+      font-size: clamp(48px, 7vw, 88px);
+      font-weight: 700;
+      letter-spacing: -1.5px;
+      color: #fff;
+      text-align: left;
+      line-height: 1.05;
+      transition: opacity 0.1s, transform 0.1s;
+    }
+    #hero-subtitle {
+      font-size: clamp(13px, 1.6vw, 18px);
+      font-weight: 300;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.45);
+      margin-top: 16px;
+      text-align: left;
+      transition: opacity 0.1s, transform 0.1s;
+    }
+
+    /* Scroll indicator */
+    #scroll-indicator {
       position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      opacity: 0.35;
+      transition: opacity 0.4s;
+      animation: scrollPulse 2.5s ease-in-out infinite;
+    }
+    #scroll-indicator span {
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    #scroll-indicator .chevron {
+      width: 20px;
+      height: 20px;
+      border-right: 1.5px solid rgba(255, 255, 255, 0.4);
+      border-bottom: 1.5px solid rgba(255, 255, 255, 0.4);
+      transform: rotate(45deg);
+    }
+    @keyframes scrollPulse {
+      0%, 100% { opacity: 0.35; transform: translateX(-50%) translateY(0); }
+      50% { opacity: 0.55; transform: translateX(-50%) translateY(6px); }
+    }
+
+    /* Graph shimmer label */
+    #graph-label {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 3;
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 1px;
+      color: transparent;
+      background: linear-gradient(
+        90deg,
+        rgba(255,255,255,0.15) 0%,
+        rgba(255,255,255,0.5) 50%,
+        rgba(255,255,255,0.15) 100%
+      );
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      animation: shimmer 4s linear infinite;
+      pointer-events: none;
+      user-select: none;
+      white-space: nowrap;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Content section below the fold */
+    #content {
+      position: relative;
+      z-index: 4;
+      min-height: 100vh;
+      background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 0%,
+        rgba(0, 0, 0, 0.7) 8%,
+        rgba(0, 0, 0, 0.92) 20%,
+        #000 35%
+      );
+      padding: 0 24px;
+    }
+    #content-inner {
+      max-width: 680px;
+      margin: 0 auto;
+      padding-top: 120px;
+      padding-bottom: 120px;
+    }
+    #content-inner h2 {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      color: #fff;
+      margin-bottom: 32px;
+      line-height: 1.2;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    #content-inner h2.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    #content-inner p {
+      font-size: 16px;
+      font-weight: 350;
+      line-height: 1.85;
+      color: rgba(255, 255, 255, 0.55);
+      margin-bottom: 24px;
+      opacity: 0;
+      transform: translateY(25px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    #content-inner p.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    #content-inner .contact {
+      margin-top: 60px;
+      padding-top: 32px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 14px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.35);
+      letter-spacing: 0.3px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    #content-inner .contact.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    #content-inner .contact a {
+      color: rgba(255, 255, 255, 0.55);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+      transition: color 0.2s, border-color 0.2s;
+    }
+    #content-inner .contact a:hover {
+      color: rgba(255, 255, 255, 0.8);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    /* Tooltip (unchanged) */
+    #tooltip {
+      position: fixed;
       display: none;
       background: rgba(5, 5, 7, 0.25);
       backdrop-filter: blur(24px) saturate(1.2);
@@ -75,8 +258,75 @@
   </style>
 </head>
 <body>
-  <div id="info">World Language Phylogenetic Graph</div>
+
+  <!-- Fixed graph background -->
+  <div id="graph-container"></div>
+
+  <!-- Hero overlay -->
+  <div id="hero">
+    <div id="hero-title">Phaistos Labs</div>
+    <div id="hero-subtitle">Deciphering the world's lost languages</div>
+    <div id="scroll-indicator">
+      <span>Scroll</span>
+      <div class="chevron"></div>
+    </div>
+  </div>
+
+  <!-- Shimmer label on graph -->
+  <div id="graph-label">Learn more about this graph</div>
+
+  <!-- Content below the fold -->
+  <div id="content">
+    <div id="content-inner">
+      <h2>Our Mission</h2>
+      <p>Phaistos Labs is building computational infrastructure to decipher Minoan Linear A, one of the last undeciphered writing systems of the ancient Mediterranean. Our approach combines constructed phonetic analysis with advanced phylogenetic language tree models to systematically reconstruct the sound values of Linear A signs.</p>
+      <p>By computationally mapping phonetic evolutionary pathways across Bronze Age language families, we construct probabilistic models of how sound systems shifted from known ancestor languages into the Minoan substrate. These models generate candidate phonetic readings for Linear A sequences, which we then validate by searching for statistically significant cognate matches against vocabularies of attested contemporary and descendant languages.</p>
+      <p>Each confirmed cognate serves as a beachhead &mdash; a fixed point from which we expand our phonetic grid outward, constraining the remaining sign values and progressively narrowing the solution space. Through iterative refinement of these phylogenetic mappings and cross-validation against independent epigraphic evidence, we aim to achieve the first systematic, reproducible decipherment of Linear A.</p>
+      <div class="contact">For more information, reach out to <a href="mailto:alvinxyz@stanford.edu">alvinxyz@stanford.edu</a></div>
+    </div>
+  </div>
+
   <div id="tooltip"></div>
+
+  <!-- Scroll-based transitions -->
+  <script>
+    // Hero fade/scale on scroll
+    const hero = document.getElementById('hero');
+    const heroTitle = document.getElementById('hero-title');
+    const heroSubtitle = document.getElementById('hero-subtitle');
+    const scrollIndicator = document.getElementById('scroll-indicator');
+    const graphLabel = document.getElementById('graph-label');
+
+    // Content reveal on scroll
+    const revealEls = document.querySelectorAll('#content-inner h2, #content-inner p, #content-inner .contact');
+
+    function onScroll() {
+      const scrollY = window.scrollY;
+      const vh = window.innerHeight;
+
+      // Hero: fade out and scale up as user scrolls
+      const heroProgress = Math.min(1, scrollY / (vh * 0.45));
+      const heroOpacity = 1 - heroProgress;
+      const heroScale = 1 + heroProgress * 0.08;
+      heroTitle.style.opacity = heroOpacity;
+      heroTitle.style.transform = `scale(${heroScale})`;
+      heroSubtitle.style.opacity = heroOpacity * 0.8;
+      heroSubtitle.style.transform = `scale(${heroScale * 0.995})`;
+      scrollIndicator.style.opacity = Math.max(0, 0.35 - heroProgress * 1.5);
+      graphLabel.style.opacity = Math.max(0, 1 - heroProgress * 3);
+
+      // Content: reveal elements as they enter viewport
+      revealEls.forEach((el, i) => {
+        const rect = el.getBoundingClientRect();
+        if (rect.top < vh * 0.85) {
+          setTimeout(() => el.classList.add('visible'), i * 80);
+        }
+      });
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll(); // initial call
+  </script>
   <script src="language_data.js"></script>
   <script type="importmap">
   {
@@ -513,7 +763,7 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
-    document.body.appendChild(renderer.domElement);
+    document.getElementById('graph-container').appendChild(renderer.domElement);
 
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
@@ -816,6 +1066,8 @@
     let dragRotY = 0, dragRotX = 0;
     let dragBaseY = 0, dragBaseX = 0;
 
+    const graphEl = renderer.domElement;
+
     window.addEventListener('mousemove', (e) => {
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
@@ -825,29 +1077,52 @@
       }
     });
 
-    window.addEventListener('mousedown', (e) => {
+    graphEl.addEventListener('mousedown', (e) => {
       isDragging = true;
       dragStartX = e.clientX;
       dragStartY = e.clientY;
       dragBaseY = dragRotY;
       dragBaseX = dragRotX;
-      renderer.domElement.style.cursor = 'grabbing';
+      graphEl.style.cursor = 'grabbing';
     });
 
     window.addEventListener('mouseup', () => {
       isDragging = false;
-      renderer.domElement.style.cursor = hoveredMesh ? 'pointer' : 'grab';
+      graphEl.style.cursor = hoveredMesh ? 'pointer' : 'grab';
     });
 
-    renderer.domElement.style.cursor = 'grab';
+    graphEl.style.cursor = 'grab';
 
     let targetZoom = 2800;
+    const BASE_ZOOM = 2800;
     const ZOOM_MIN = 400;
     const ZOOM_MAX = 8000;
+
+    // Wheel: zoom graph when in hero view; bridge zoom-out to page scroll only at default zoom
     window.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      targetZoom += e.deltaY * 2;
-      targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, targetZoom));
+      // If already scrolled past hero, let the page scroll normally
+      if (window.scrollY > window.innerHeight * 0.3) return;
+
+      // If graph is zoomed in at all (below base), capture ALL wheel for graph zoom
+      if (targetZoom < BASE_ZOOM - 10) {
+        e.preventDefault();
+        targetZoom += e.deltaY * 2;
+        targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, targetZoom));
+        // Clamp so it doesn't overshoot past base when zooming out
+        if (targetZoom > BASE_ZOOM) targetZoom = BASE_ZOOM;
+        return;
+      }
+
+      // At default zoom level
+      if (e.deltaY < 0) {
+        // Scrolling up / zooming in — zoom the graph
+        e.preventDefault();
+        targetZoom += e.deltaY * 2;
+        targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, targetZoom));
+      } else {
+        // Scrolling down at default zoom — bridge to page scroll
+        window.scrollBy({ top: e.deltaY * 0.8, behavior: 'auto' });
+      }
     }, { passive: false });
 
     // ================================================================
@@ -860,27 +1135,26 @@
     let touchHoldTimer = null;
     let touchMoved = false;
 
+    let isTouchPinching = false;
+
     renderer.domElement.addEventListener('touchstart', (e) => {
-      e.preventDefault();
       if (e.touches.length === 2) {
-        // Pinch zoom start
+        // Pinch zoom start — prevent default to stop page zoom
+        e.preventDefault();
+        isTouchPinching = true;
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         touchStartDist = Math.sqrt(dx * dx + dy * dy);
         touchStartZoom = targetZoom;
         if (touchHoldTimer) { clearTimeout(touchHoldTimer); touchHoldTimer = null; }
       } else if (e.touches.length === 1) {
-        // Single finger — drag to rotate + hold to inspect node
+        // Single finger — record start for tap detection; don't block scroll
         const t = e.touches[0];
         touchDragId = t.identifier;
         touchStartX = t.clientX;
         touchStartY = t.clientY;
         touchMoved = false;
-        isDragging = true;
-        dragStartX = t.clientX;
-        dragStartY = t.clientY;
-        dragBaseY = dragRotY;
-        dragBaseX = dragRotX;
+        isTouchPinching = false;
 
         // Start hold timer for tooltip (300ms hold = show tooltip)
         touchHoldTimer = setTimeout(() => {
@@ -902,12 +1176,13 @@
           touchHoldTimer = null;
         }, 300);
       }
-    }, { passive: false });
+    }, { passive: true });
 
     renderer.domElement.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      if (e.touches.length === 2) {
-        // Pinch zoom
+      if (e.touches.length === 2 || isTouchPinching) {
+        // Pinch zoom — prevent default
+        e.preventDefault();
+        isTouchPinching = true;
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -918,15 +1193,13 @@
         const dx = t.clientX - touchStartX;
         const dy = t.clientY - touchStartY;
         if (Math.abs(dx) + Math.abs(dy) > 8) touchMoved = true;
-        // Rotate
-        dragRotY = dragBaseY + (t.clientX - dragStartX) * 0.004;
-        dragRotX = dragBaseX + (t.clientY - dragStartY) * 0.004;
+        // Let single-finger scroll pass through (no preventDefault)
       }
     }, { passive: false });
 
     renderer.domElement.addEventListener('touchend', (e) => {
-      e.preventDefault();
       if (touchHoldTimer) { clearTimeout(touchHoldTimer); touchHoldTimer = null; }
+      isTouchPinching = false;
       if (e.touches.length === 0) {
         isDragging = false;
         // Quick tap (no drag, no hold) — toggle tooltip
