@@ -7,7 +7,7 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; overflow: hidden; }
-    canvas { display: block; }
+    canvas { display: block; touch-action: none; }
     #info {
       position: absolute;
       bottom: 24px;
@@ -413,9 +413,10 @@
       }
     }
 
-    // Sequential startup: each family cascades right after the previous finishes (zero gap)
-    const STARTUP_WAVE = 0.06;    // BFS wave interval per depth level
-    const STARTUP_GROW = 0.18;    // edge grow duration for startup
+    // Overlapping startup: next family begins well before the previous finishes
+    const STARTUP_WAVE = 0.14;    // slow, visible BFS wave per depth level
+    const STARTUP_GROW = 0.4;     // slow edge grow for smooth spread
+    const OVERLAP_FRAC = 0.08;    // next family starts when previous is only 8% done
     function runStaggeredCascade() {
       const ns = graphData.nodes;
       const es = graphData.edges;
@@ -431,7 +432,7 @@
         [famKeys[i], famKeys[j]] = [famKeys[j], famKeys[i]];
       }
 
-      let runningOffset = 0; // next family starts exactly when previous ends
+      let runningOffset = 0;
 
       famKeys.forEach((fam) => {
         const indices = familyGroups.get(fam);
@@ -453,7 +454,7 @@
         // Inline BFS with startup timing
         const visited = new Set();
         visited.add(bestIdx);
-        ns[bestIdx].cascadeRevealTime = offset;
+        ns[bestIdx].cascadeRevealTime = Math.min(offset, ns[bestIdx].cascadeRevealTime);
         let queue = [bestIdx];
         let depth = 0;
         let famMaxTime = offset;
@@ -463,17 +464,19 @@
           for (const nodeId of queue) {
             for (const ei of adj[nodeId]) {
               const e = es[ei];
-              if (e.cascadeRevealTime < Infinity) continue;
               const other = e.sourceIdx === nodeId ? e.targetIdx : e.sourceIdx;
               if (!nodeSet.has(other)) continue;
-              e.cascadeRevealTime = offset + depth * STARTUP_WAVE + intraIdx * 0.002;
+              const t = offset + depth * STARTUP_WAVE + intraIdx * 0.001;
+              if (t >= e.cascadeRevealTime) continue; // already revealed earlier by another family
+              e.cascadeRevealTime = t;
               e.cascadeDirection = e.sourceIdx === nodeId ? 1 : -1;
-              if (e.cascadeRevealTime > famMaxTime) famMaxTime = e.cascadeRevealTime;
+              if (t > famMaxTime) famMaxTime = t;
               intraIdx++;
               if (!visited.has(other)) {
                 visited.add(other);
-                ns[other].cascadeRevealTime = e.cascadeRevealTime + STARTUP_GROW * 0.4;
-                if (ns[other].cascadeRevealTime > famMaxTime) famMaxTime = ns[other].cascadeRevealTime;
+                const nt = t + STARTUP_GROW * 0.3;
+                ns[other].cascadeRevealTime = Math.min(ns[other].cascadeRevealTime, nt);
+                if (nt > famMaxTime) famMaxTime = nt;
                 next.push(other);
               }
             }
@@ -482,8 +485,9 @@
           depth++;
         }
 
-        // Next family starts exactly when this one finishes (zero gap)
-        runningOffset = famMaxTime;
+        // Next family starts when this one is ~30% through (overlap)
+        const famDuration = famMaxTime - offset;
+        runningOffset = offset + famDuration * OVERLAP_FRAC;
       });
 
       // Fill in any unreached nodes/edges
@@ -491,7 +495,7 @@
       for (const n of ns) if (n.cascadeRevealTime < Infinity && n.cascadeRevealTime > maxT) maxT = n.cascadeRevealTime;
       for (const n of ns) if (n.cascadeRevealTime === Infinity) n.cascadeRevealTime = maxT;
       for (const e of es) if (e.cascadeRevealTime === Infinity) e.cascadeRevealTime = maxT;
-      startupCascadeDuration = maxT + STARTUP_GROW; // total time for all families to finish
+      startupCascadeDuration = maxT + STARTUP_GROW;
     }
     let startupCascadeDuration = 10; // will be set by runStaggeredCascade
 
@@ -845,6 +849,114 @@
       targetZoom += e.deltaY * 2;
       targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, targetZoom));
     }, { passive: false });
+
+    // ================================================================
+    // TOUCH CONTROLS — pinch zoom, single-finger drag, tap/hold for tooltip
+    // ================================================================
+    let touchStartDist = 0;
+    let touchStartZoom = 2800;
+    let touchDragId = null;
+    let touchStartX = 0, touchStartY = 0;
+    let touchHoldTimer = null;
+    let touchMoved = false;
+
+    renderer.domElement.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 2) {
+        // Pinch zoom start
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        touchStartDist = Math.sqrt(dx * dx + dy * dy);
+        touchStartZoom = targetZoom;
+        if (touchHoldTimer) { clearTimeout(touchHoldTimer); touchHoldTimer = null; }
+      } else if (e.touches.length === 1) {
+        // Single finger — drag to rotate + hold to inspect node
+        const t = e.touches[0];
+        touchDragId = t.identifier;
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+        touchMoved = false;
+        isDragging = true;
+        dragStartX = t.clientX;
+        dragStartY = t.clientY;
+        dragBaseY = dragRotY;
+        dragBaseX = dragRotX;
+
+        // Start hold timer for tooltip (300ms hold = show tooltip)
+        touchHoldTimer = setTimeout(() => {
+          if (!touchMoved) {
+            doRaycast(t.clientX, t.clientY);
+            if (hoveredMesh) {
+              if (pinnedMesh === hoveredMesh) {
+                pinnedMesh = null;
+                unhighlightNode();
+                hideTooltip();
+              } else {
+                pinnedMesh = hoveredMesh;
+                const d = hoveredMesh.userData.langData;
+                highlightNode(hoveredMesh);
+                showTooltip(d, t.clientX, t.clientY, true);
+              }
+            }
+          }
+          touchHoldTimer = null;
+        }, 300);
+      }
+    }, { passive: false });
+
+    renderer.domElement.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 2) {
+        // Pinch zoom
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const scale = touchStartDist / dist;
+        targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, touchStartZoom * scale));
+      } else if (e.touches.length === 1) {
+        const t = e.touches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+        if (Math.abs(dx) + Math.abs(dy) > 8) touchMoved = true;
+        // Rotate
+        dragRotY = dragBaseY + (t.clientX - dragStartX) * 0.004;
+        dragRotX = dragBaseX + (t.clientY - dragStartY) * 0.004;
+      }
+    }, { passive: false });
+
+    renderer.domElement.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      if (touchHoldTimer) { clearTimeout(touchHoldTimer); touchHoldTimer = null; }
+      if (e.touches.length === 0) {
+        isDragging = false;
+        // Quick tap (no drag, no hold) — toggle tooltip
+        if (!touchMoved) {
+          doRaycast(touchStartX, touchStartY);
+          if (hoveredMesh) {
+            if (pinnedMesh === hoveredMesh) {
+              pinnedMesh = null;
+              unhighlightNode();
+              hideTooltip();
+            } else {
+              pinnedMesh = hoveredMesh;
+              const d = hoveredMesh.userData.langData;
+              highlightNode(hoveredMesh);
+              showTooltip(d, touchStartX, touchStartY, true);
+            }
+          } else if (pinnedMesh) {
+            // Tap empty space — unpin
+            pinnedMesh = null;
+            unhighlightNode();
+            hideTooltip();
+          }
+        }
+      }
+    }, { passive: false });
+
+    renderer.domElement.addEventListener('touchcancel', () => {
+      if (touchHoldTimer) { clearTimeout(touchHoldTimer); touchHoldTimer = null; }
+      isDragging = false;
+    });
 
     // ================================================================
     // TOOLTIP — RAYCASTER + TIME PERIODS + INTERACTION
