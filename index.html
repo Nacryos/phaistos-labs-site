@@ -62,6 +62,15 @@
       text-align: left;
       transition: opacity 0.1s, transform 0.1s;
     }
+    #typewriter-cursor {
+      color: rgba(255, 255, 255, 0.45);
+      animation: cursorBlink 0.6s step-end infinite;
+      font-weight: 100;
+    }
+    @keyframes cursorBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
 
     /* Scroll indicator */
     #scroll-indicator {
@@ -117,9 +126,46 @@
       -webkit-background-clip: text;
       background-clip: text;
       animation: shimmer 4s linear infinite;
-      pointer-events: none;
+      pointer-events: auto;
+      cursor: pointer;
       user-select: none;
       white-space: nowrap;
+      transition: opacity 0.3s;
+    }
+    #graph-label:hover {
+      opacity: 0.9 !important;
+    }
+
+    /* Graph info popup */
+    #graph-info {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 80px;
+      background: transparent;
+    }
+    #graph-info-box {
+      background: rgba(5, 5, 7, 0.3);
+      backdrop-filter: blur(24px) saturate(1.2);
+      -webkit-backdrop-filter: blur(24px) saturate(1.2);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 20px 26px;
+      color: #ccc;
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+      max-width: 460px;
+      min-width: 300px;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
+      animation: fadeUpIn 0.35s ease-out;
+    }
+    @keyframes fadeUpIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     @keyframes shimmer {
       0% { background-position: 200% 0; }
@@ -222,7 +268,7 @@
       z-index: 100;
       box-shadow: 0 4px 24px rgba(0,0,0,0.6);
     }
-    #tooltip .tt-header {
+    .tt-header {
       color: #ffffff;
       font-size: 14px;
       font-weight: bold;
@@ -232,22 +278,22 @@
       border-bottom: 1px solid rgba(255,255,255,0.12);
       padding-bottom: 6px;
     }
-    #tooltip .tt-row {
+    .tt-row {
       display: flex;
       gap: 10px;
     }
-    #tooltip .tt-label {
+    .tt-label {
       color: rgba(255,255,255,0.3);
       min-width: 80px;
       flex-shrink: 0;
     }
-    #tooltip .tt-value {
+    .tt-value {
       color: rgba(255,255,255,0.7);
     }
-    #tooltip .tt-status-alive { color: #5c5; }
-    #tooltip .tt-status-extinct { color: #e55; }
-    #tooltip .tt-status-moribund { color: rgba(255,255,255,0.5); }
-    #tooltip .tt-pinned {
+    .tt-status-alive { color: #5c5; }
+    .tt-status-extinct { color: #e55; }
+    .tt-status-moribund { color: rgba(255,255,255,0.5); }
+    .tt-pinned {
       position: absolute;
       top: 6px;
       right: 10px;
@@ -265,7 +311,7 @@
   <!-- Hero overlay -->
   <div id="hero">
     <div id="hero-title">Phaistos Labs</div>
-    <div id="hero-subtitle">Deciphering the world's lost languages</div>
+    <div id="hero-subtitle"><span id="typewriter"></span><span id="typewriter-cursor">|</span></div>
     <div id="scroll-indicator">
       <span>Scroll</span>
       <div class="chevron"></div>
@@ -273,7 +319,19 @@
   </div>
 
   <!-- Shimmer label on graph -->
-  <div id="graph-label">Learn more about this graph</div>
+  <div id="graph-label" onclick="document.getElementById('graph-info').style.display='flex'">Learn more about this graph</div>
+
+  <!-- Graph info popup -->
+  <div id="graph-info" onclick="if(event.target===this)this.style.display='none'">
+    <div id="graph-info-box">
+      <div class="tt-header">World Language Phylogenetic Graph</div>
+      <div class="tt-row"><span class="tt-label">Nodes</span><span class="tt-value">1,926 languages across 88 families</span></div>
+      <div class="tt-row"><span class="tt-label">Edges</span><span class="tt-value">1,830 parent–child phylogenetic links</span></div>
+      <div class="tt-row"><span class="tt-label">Data</span><span class="tt-value">Every major language family, living and extinct</span></div>
+      <div class="tt-row" style="margin-top:8px"><span class="tt-value" style="color:rgba(255,255,255,0.45)">Each node represents a language, sized by the number of descendant languages in its branch. Edges trace phylogenetic descent from proto-languages to their modern offspring. Families are loosely clustered and colour-coded by warm hue. Click any node to inspect it.</span></div>
+      <div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,0.2);letter-spacing:1px;text-align:right;cursor:pointer" onclick="document.getElementById('graph-info').style.display='none'">CLOSE</div>
+    </div>
+  </div>
 
   <!-- Content below the fold -->
   <div id="content">
@@ -290,7 +348,7 @@
 
   <!-- Scroll-based transitions -->
   <script>
-    // Hero fade/scale on scroll
+    // Hero fade/scale on scroll AND on zoom
     const hero = document.getElementById('hero');
     const heroTitle = document.getElementById('hero-title');
     const heroSubtitle = document.getElementById('hero-subtitle');
@@ -300,12 +358,22 @@
     // Content reveal on scroll
     const revealEls = document.querySelectorAll('#content-inner h2, #content-inner p, #content-inner .contact');
 
+    // Expose zoom state for the scroll handler (set by Three.js module)
+    window._graphZoom = { target: 2800, base: 2800 };
+
     function onScroll() {
       const scrollY = window.scrollY;
       const vh = window.innerHeight;
 
-      // Hero: fade out and scale up as user scrolls
-      const heroProgress = Math.min(1, scrollY / (vh * 0.45));
+      // Scroll-based fade
+      const scrollProgress = Math.min(1, scrollY / (vh * 0.45));
+
+      // Zoom-based fade: 0 at base zoom, 1 when zoomed in significantly
+      const zoomDelta = window._graphZoom.base - window._graphZoom.target;
+      const zoomProgress = Math.min(1, Math.max(0, zoomDelta / 800));
+
+      // Combined: whichever is stronger hides the hero
+      const heroProgress = Math.max(scrollProgress, zoomProgress);
       const heroOpacity = 1 - heroProgress;
       const heroScale = 1 + heroProgress * 0.08;
       heroTitle.style.opacity = heroOpacity;
@@ -325,7 +393,29 @@
     }
 
     window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll(); // initial call
+    // Also run on every animation frame to catch zoom changes
+    (function tickHero() { onScroll(); requestAnimationFrame(tickHero); })();
+
+    // Typewriter animation
+    (function typewriter() {
+      const text = 'Deciphering the world\'s lost languages';
+      const el = document.getElementById('typewriter');
+      const cursor = document.getElementById('typewriter-cursor');
+      let i = 0;
+      const speed = 25; // ms per character
+      function type() {
+        if (i < text.length) {
+          el.textContent += text.charAt(i);
+          i++;
+          setTimeout(type, speed + Math.random() * 30);
+        } else {
+          // Hide cursor after a pause
+          setTimeout(() => { cursor.style.display = 'none'; }, 1500);
+        }
+      }
+      // Start after a brief delay for the title to appear
+      setTimeout(type, 800);
+    })();
   </script>
   <script src="language_data.js"></script>
   <script type="importmap">
@@ -1608,6 +1698,8 @@
       worldGroup.rotation.y = autoRotAngle + dragRotY;
       worldGroup.rotation.x = dragRotX + (isDragging ? 0 : mouse.y * 0.1 * 0.02);
       camera.position.z += (targetZoom - camera.position.z) * 0.08;
+      window._graphZoom.target = targetZoom;
+      window._graphZoom.base = BASE_ZOOM;
 
       // Update nodes
       for (let i = 0; i < NODE_COUNT; i++) {
