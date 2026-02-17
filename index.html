@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>World Language Phylogenetic Graph</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; overflow: hidden; }
+    canvas { display: block; }
+    #info {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.2);
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      pointer-events: none;
+      user-select: none;
+      font-family: 'Courier New', monospace;
+    }
+    #tooltip {
+      position: absolute;
+      display: none;
+      background: rgba(5, 5, 7, 0.25);
+      backdrop-filter: blur(24px) saturate(1.2);
+      -webkit-backdrop-filter: blur(24px) saturate(1.2);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 5px;
+      padding: 14px 18px;
+      color: #ccc;
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+      pointer-events: none;
+      max-width: 400px;
+      min-width: 260px;
+      z-index: 100;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+    }
+    #tooltip .tt-header {
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: bold;
+      letter-spacing: 1.5px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      padding-bottom: 6px;
+    }
+    #tooltip .tt-row {
+      display: flex;
+      gap: 10px;
+    }
+    #tooltip .tt-label {
+      color: rgba(255,255,255,0.3);
+      min-width: 80px;
+      flex-shrink: 0;
+    }
+    #tooltip .tt-value {
+      color: rgba(255,255,255,0.7);
+    }
+    #tooltip .tt-status-alive { color: #5c5; }
+    #tooltip .tt-status-extinct { color: #e55; }
+    #tooltip .tt-status-moribund { color: rgba(255,255,255,0.5); }
+    #tooltip .tt-pinned {
+      position: absolute;
+      top: 6px;
+      right: 10px;
+      font-size: 10px;
+      color: rgba(255,255,255,0.2);
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+  <div id="info">World Language Phylogenetic Graph</div>
+  <div id="tooltip"></div>
+  <script src="language_data.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+    // ================================================================
+    // LOAD AND PROCESS LANGUAGE DATA
+    // ================================================================
+    const raw = window.LANGUAGE_DATA;
+    const nodeMap = new Map();
+    raw.nodes.forEach(n => nodeMap.set(n.id, n));
+
+    // Count descendants for each node (recursive)
+    const descendantCount = new Map();
+    const childrenMap = new Map();
+    raw.nodes.forEach(n => childrenMap.set(n.id, []));
+    raw.edges.forEach(e => {
+      const kids = childrenMap.get(e.source);
+      if (kids) kids.push(e.target);
+    });
+
+    function countDescendants(id) {
+      if (descendantCount.has(id)) return descendantCount.get(id);
+      const kids = childrenMap.get(id) || [];
+      let count = 0;
+      for (const kid of kids) {
+        count += 1 + countDescendants(kid);
+      }
+      descendantCount.set(id, count);
+      return count;
+    }
+    raw.nodes.forEach(n => countDescendants(n.id));
+
+    // Find all unique families for color assignment
+    const families = [...new Set(raw.nodes.map(n => n.family))];
+
+    // Family color palette — assign distinct hues, warm tones
+    const FAMILY_COLORS = {};
+    const MAJOR_FAMILY_COLORS = {
+      'Indo-European': [0.0, 0.85, 0.55],    // red
+      'Sino-Tibetan': [0.10, 0.9, 0.5],      // orange
+      'Niger-Congo': [0.93, 0.85, 0.5],       // magenta-red
+      'Afroasiatic': [0.06, 0.82, 0.55],      // red-orange
+      'Austronesian': [0.14, 0.85, 0.48],     // amber
+      'Dravidian': [0.02, 0.78, 0.5],         // deep red
+      'Turkic': [0.08, 0.82, 0.45],           // warm orange
+      'Uralic': [0.96, 0.72, 0.55],           // rose
+      'Nilo-Saharan': [0.04, 0.9, 0.45],      // scarlet
+      'Kra-Dai': [0.12, 0.85, 0.48],          // amber-gold
+      'Austroasiatic': [0.07, 0.8, 0.52],      // orange
+      'Algic': [0.90, 0.78, 0.5],             // pink
+      'Na-Dene': [0.88, 0.8, 0.48],           // deep pink
+      'Uto-Aztecan': [0.05, 0.88, 0.48],      // scarlet
+      'Mayan': [0.11, 0.9, 0.46],             // amber
+      'Tupian': [0.01, 0.85, 0.44],            // crimson
+      'Quechuan': [0.03, 0.85, 0.52],          // warm red
+      'Mongolic': [0.09, 0.72, 0.5],           // orange
+      'Japonic': [0.97, 0.85, 0.55],           // rose-red
+      'Koreanic': [0.95, 0.82, 0.52],          // pink-rose
+    };
+
+    families.forEach((fam, i) => {
+      if (MAJOR_FAMILY_COLORS[fam]) {
+        FAMILY_COLORS[fam] = MAJOR_FAMILY_COLORS[fam];
+      } else {
+        // Distribute remaining families across warm hue range
+        const hue = (i * 0.618033988749895) % 1; // golden ratio distribution
+        // Keep hues in the warm range (red-orange-pink: 0.9-0.15 wrapping)
+        const warmHue = ((hue * 0.25) + 0.9) % 1;
+        FAMILY_COLORS[fam] = [warmHue, 0.7 + Math.random() * 0.2, 0.4 + Math.random() * 0.15];
+      }
+    });
+
+    // ================================================================
+    // BUILD GRAPH DATA
+    // ================================================================
+    const SPREAD = 1200;
+    const NODE_COUNT = raw.nodes.length;
+
+    const graphData = {
+      nodes: raw.nodes.map((n, i) => {
+        const desc = descendantCount.get(n.id) || 0;
+        const speakers = n.speakers || 0;
+        // Experience: based on descendant count (more descendants = larger node)
+        const experience = Math.min(1, desc / 80);
+        // Recency: based on speaker count (more speakers = brighter)
+        const recency = speakers > 0 ? Math.min(1, 0.3 + Math.log10(Math.max(1, speakers)) / 10) : 0.1;
+
+        return {
+          ...n,
+          index: i,
+          descendantCount: desc,
+          experience,
+          recency,
+          position: new THREE.Vector3(
+            (Math.random() - 0.5) * SPREAD,
+            (Math.random() - 0.5) * SPREAD,
+            (Math.random() - 0.5) * SPREAD
+          ),
+          velocity: new THREE.Vector3(),
+          cascadeRevealTime: Infinity,
+        };
+      }),
+      edges: raw.edges.map(e => {
+        const si = raw.nodes.findIndex(n => n.id === e.source);
+        const ti = raw.nodes.findIndex(n => n.id === e.target);
+        return {
+          sourceIdx: si,
+          targetIdx: ti,
+          source: e.source,
+          target: e.target,
+          phaseOffset: Math.random() * Math.PI * 2,
+          fiberSpeed: 0.12 + Math.random() * 0.14,
+          cascadeRevealTime: Infinity,
+          cascadeDirection: 1,
+        };
+      }).filter(e => e.sourceIdx >= 0 && e.targetIdx >= 0),
+      adjacency: [],
+    };
+
+    // Build adjacency
+    graphData.adjacency = Array.from({ length: NODE_COUNT }, () => []);
+    for (let ei = 0; ei < graphData.edges.length; ei++) {
+      graphData.adjacency[graphData.edges[ei].sourceIdx].push(ei);
+      graphData.adjacency[graphData.edges[ei].targetIdx].push(ei);
+    }
+
+    // ================================================================
+    // CONFIGURATION
+    // ================================================================
+    const SEGMENTS_PER_EDGE = 12;
+    const COLOR_CREAM = new THREE.Color('#fff5e6');
+
+    // Cascade cycle timing
+    const CASCADE_DUR = 10;
+    const SETTLE_DUR = 3;
+    const STEADY_DUR = 30;
+    const FADEOUT_DUR = 2.5;
+    const DARK_DUR = 0.6;
+    const WAVE_INTERVAL = 0.15;
+    const INTRA_WAVE_DELAY = 0.005;
+    const EDGE_GROW_DUR = 0.5;
+
+    // ================================================================
+    // FORCE-DIRECTED LAYOUT (pre-compute)
+    // ================================================================
+    // For 1900+ nodes, O(n^2) is too slow. Use grid-based approximation.
+    const GRID_SIZE = 8;
+    const REPULSION = 6000;
+    const SPRING_K = 0.008;
+    const REST_LEN = 15;
+    const DAMPING = 0.85;
+    const CENTER_PULL = 0.002;
+    const _diff = new THREE.Vector3();
+
+    // Group nodes by family for initial positioning — cluster families together
+    const familyGroups = new Map();
+    graphData.nodes.forEach((n, i) => {
+      if (!familyGroups.has(n.family)) familyGroups.set(n.family, []);
+      familyGroups.get(n.family).push(i);
+    });
+
+    // Initial positions: randomized galaxy-like scatter with loose family clustering
+    // Box-Muller transform for Gaussian random numbers
+    function gaussRand() {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    }
+    const famRadius = SPREAD * 0.4;
+    familyGroups.forEach((indices, family) => {
+      // Random direction for family center with Gaussian radial scatter
+      const theta = Math.random() * Math.PI * 2;
+      const cosP = 2 * Math.random() - 1;
+      const sinP = Math.sqrt(1 - cosP * cosP);
+      const rFam = famRadius * (0.3 + 0.7 * Math.random()); // radial jitter
+      const cx = rFam * sinP * Math.cos(theta);
+      const cy = rFam * sinP * Math.sin(theta);
+      const cz = rFam * cosP;
+
+      // Scatter languages within the family cluster using Gaussian offsets
+      const clusterRadius = Math.min(SPREAD * 0.3, 30 + indices.length * 1.5);
+      indices.forEach((ni) => {
+        const node = graphData.nodes[ni];
+        const ox = gaussRand() * clusterRadius * 0.4;
+        const oy = gaussRand() * clusterRadius * 0.4;
+        const oz = gaussRand() * clusterRadius * 0.4;
+        node.position.set(cx + ox, cy + oy, cz + oz);
+      });
+    });
+
+    // Grid-accelerated force simulation
+    function simulateForces() {
+      const ns = graphData.nodes;
+      const gridCells = new Map();
+      const cellSize = SPREAD / GRID_SIZE;
+
+      // Build spatial grid
+      for (let i = 0; i < NODE_COUNT; i++) {
+        const p = ns[i].position;
+        const gx = Math.floor(p.x / cellSize);
+        const gy = Math.floor(p.y / cellSize);
+        const gz = Math.floor(p.z / cellSize);
+        const key = `${gx},${gy},${gz}`;
+        if (!gridCells.has(key)) gridCells.set(key, []);
+        gridCells.get(key).push(i);
+      }
+
+      // Repulsion — only between nearby cells
+      for (const [key, cell] of gridCells) {
+        const [gx, gy, gz] = key.split(',').map(Number);
+        // Check neighboring cells
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dz = -1; dz <= 1; dz++) {
+              const nkey = `${gx+dx},${gy+dy},${gz+dz}`;
+              const ncell = gridCells.get(nkey);
+              if (!ncell) continue;
+              for (const i of cell) {
+                for (const j of ncell) {
+                  if (j <= i) continue;
+                  _diff.subVectors(ns[i].position, ns[j].position);
+                  const dist = Math.max(_diff.length(), 1);
+                  if (dist > cellSize * 3) continue;
+                  const f = REPULSION / (dist * dist);
+                  _diff.normalize().multiplyScalar(Math.min(f, 5));
+                  ns[i].velocity.add(_diff);
+                  ns[j].velocity.sub(_diff);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Spring attraction along edges
+      for (const e of graphData.edges) {
+        const a = ns[e.sourceIdx];
+        const b = ns[e.targetIdx];
+        _diff.subVectors(b.position, a.position);
+        const d = _diff.length();
+        _diff.normalize().multiplyScalar(SPRING_K * (d - REST_LEN));
+        a.velocity.add(_diff);
+        b.velocity.sub(_diff);
+      }
+
+      // Centering + damping
+      for (const n of ns) {
+        n.velocity.add(n.position.clone().multiplyScalar(-CENTER_PULL));
+        n.velocity.multiplyScalar(DAMPING);
+        // Clamp velocity
+        const speed = n.velocity.length();
+        if (speed > 10) n.velocity.multiplyScalar(10 / speed);
+        n.position.add(n.velocity);
+      }
+    }
+
+    console.log('Running force layout...');
+    for (let i = 0; i < 120; i++) simulateForces();
+    console.log('Layout complete.');
+
+    // ================================================================
+    // BFS CASCADE
+    // ================================================================
+    function pickEpicenter() {
+      const sorted = graphData.nodes
+        .map((n, i) => ({ i, d: n.position.length() }))
+        .sort((a, b) => a.d - b.d);
+      const pool = sorted.slice(0, Math.floor(NODE_COUNT * 0.15));
+      return pool[Math.floor(Math.random() * pool.length)].i;
+    }
+
+    // Run BFS cascade from a single epicenter (used for single-family cascades)
+    function runBFS(epicenter, timeOffset, nodeSet, edgeFilter) {
+      const ns = graphData.nodes;
+      const es = graphData.edges;
+      const adj = graphData.adjacency;
+      const offset = timeOffset || 0;
+
+      // If no nodeSet given, reset everything and cascade all
+      if (!nodeSet) {
+        for (const n of ns) n.cascadeRevealTime = Infinity;
+        for (const e of es) { e.cascadeRevealTime = Infinity; e.cascadeDirection = 1; }
+      }
+
+      const visited = new Set();
+      visited.add(epicenter);
+      ns[epicenter].cascadeRevealTime = offset;
+
+      let queue = [epicenter];
+      let depth = 0;
+
+      while (queue.length > 0) {
+        const next = [];
+        let intraIdx = 0;
+        for (const nodeId of queue) {
+          for (const ei of adj[nodeId]) {
+            const e = es[ei];
+            if (e.cascadeRevealTime < Infinity) continue;
+            const other = e.sourceIdx === nodeId ? e.targetIdx : e.sourceIdx;
+            if (nodeSet && !nodeSet.has(other)) continue; // stay within family
+
+            e.cascadeRevealTime = offset + depth * WAVE_INTERVAL + intraIdx * INTRA_WAVE_DELAY;
+            e.cascadeDirection = e.sourceIdx === nodeId ? 1 : -1;
+            intraIdx++;
+
+            if (!visited.has(other)) {
+              visited.add(other);
+              ns[other].cascadeRevealTime = e.cascadeRevealTime + EDGE_GROW_DUR * 0.4;
+              next.push(other);
+            }
+          }
+        }
+        queue = next;
+        depth++;
+      }
+
+      // Only fill in unreached nodes if doing a full (non-family) cascade
+      if (!nodeSet) {
+        const maxTime = offset + depth * WAVE_INTERVAL;
+        for (const n of ns) if (n.cascadeRevealTime === Infinity) n.cascadeRevealTime = maxTime;
+        for (const e of es) if (e.cascadeRevealTime === Infinity) e.cascadeRevealTime = maxTime;
+      }
+    }
+
+    // Sequential startup: each family cascades right after the previous finishes (zero gap)
+    const STARTUP_WAVE = 0.06;    // BFS wave interval per depth level
+    const STARTUP_GROW = 0.18;    // edge grow duration for startup
+    function runStaggeredCascade() {
+      const ns = graphData.nodes;
+      const es = graphData.edges;
+      const adj = graphData.adjacency;
+      // Reset all
+      for (const n of ns) n.cascadeRevealTime = Infinity;
+      for (const e of es) { e.cascadeRevealTime = Infinity; e.cascadeDirection = 1; }
+
+      // Shuffle families for random order
+      const famKeys = [...familyGroups.keys()];
+      for (let i = famKeys.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [famKeys[i], famKeys[j]] = [famKeys[j], famKeys[i]];
+      }
+
+      let runningOffset = 0; // next family starts exactly when previous ends
+
+      famKeys.forEach((fam) => {
+        const indices = familyGroups.get(fam);
+        if (!indices || indices.length === 0) return;
+        const nodeSet = new Set(indices);
+        const offset = runningOffset;
+
+        // Pick epicenter near centroid
+        let cx = 0, cy = 0, cz = 0;
+        for (const ni of indices) { cx += ns[ni].position.x; cy += ns[ni].position.y; cz += ns[ni].position.z; }
+        cx /= indices.length; cy /= indices.length; cz /= indices.length;
+        let bestDist = Infinity, bestIdx = indices[0];
+        for (const ni of indices) {
+          const dx = ns[ni].position.x - cx, dy = ns[ni].position.y - cy, dz = ns[ni].position.z - cz;
+          const d = dx*dx + dy*dy + dz*dz;
+          if (d < bestDist) { bestDist = d; bestIdx = ni; }
+        }
+
+        // Inline BFS with startup timing
+        const visited = new Set();
+        visited.add(bestIdx);
+        ns[bestIdx].cascadeRevealTime = offset;
+        let queue = [bestIdx];
+        let depth = 0;
+        let famMaxTime = offset;
+        while (queue.length > 0) {
+          const next = [];
+          let intraIdx = 0;
+          for (const nodeId of queue) {
+            for (const ei of adj[nodeId]) {
+              const e = es[ei];
+              if (e.cascadeRevealTime < Infinity) continue;
+              const other = e.sourceIdx === nodeId ? e.targetIdx : e.sourceIdx;
+              if (!nodeSet.has(other)) continue;
+              e.cascadeRevealTime = offset + depth * STARTUP_WAVE + intraIdx * 0.002;
+              e.cascadeDirection = e.sourceIdx === nodeId ? 1 : -1;
+              if (e.cascadeRevealTime > famMaxTime) famMaxTime = e.cascadeRevealTime;
+              intraIdx++;
+              if (!visited.has(other)) {
+                visited.add(other);
+                ns[other].cascadeRevealTime = e.cascadeRevealTime + STARTUP_GROW * 0.4;
+                if (ns[other].cascadeRevealTime > famMaxTime) famMaxTime = ns[other].cascadeRevealTime;
+                next.push(other);
+              }
+            }
+          }
+          queue = next;
+          depth++;
+        }
+
+        // Next family starts exactly when this one finishes (zero gap)
+        runningOffset = famMaxTime;
+      });
+
+      // Fill in any unreached nodes/edges
+      let maxT = 0;
+      for (const n of ns) if (n.cascadeRevealTime < Infinity && n.cascadeRevealTime > maxT) maxT = n.cascadeRevealTime;
+      for (const n of ns) if (n.cascadeRevealTime === Infinity) n.cascadeRevealTime = maxT;
+      for (const e of es) if (e.cascadeRevealTime === Infinity) e.cascadeRevealTime = maxT;
+      startupCascadeDuration = maxT + STARTUP_GROW; // total time for all families to finish
+    }
+    let startupCascadeDuration = 10; // will be set by runStaggeredCascade
+
+    // ================================================================
+    // THREE.JS SCENE
+    // ================================================================
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#000000');
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 20000);
+    camera.position.set(0, 0, 2800);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+    document.body.appendChild(renderer.domElement);
+
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      2.8, 1.1, 0.05
+    );
+    composer.addPass(bloomPass);
+
+    const worldGroup = new THREE.Group();
+    scene.add(worldGroup);
+
+    // ================================================================
+    // NODE MESHES
+    // ================================================================
+    const nodeSphereGeo = new THREE.SphereGeometry(1, 12, 12);
+    const nodeMeshes = [];
+
+    for (const node of graphData.nodes) {
+      const exp = node.experience;
+      const rec = node.recency;
+      const famColor = FAMILY_COLORS[node.family] || [0.0, 0.8, 0.5];
+
+      const baseColor = new THREE.Color().setHSL(famColor[0], famColor[1], famColor[2]);
+      baseColor.lerp(COLOR_CREAM, rec * 0.3 + exp * 0.15);
+      const brightness = 0.65 + rec * 0.35;
+      baseColor.multiplyScalar(brightness);
+
+      // Size: descendant-based
+      const size = 2.0 + Math.pow(exp, 1.2) * 14;
+
+      const mat = new THREE.MeshBasicMaterial({
+        color: baseColor,
+        transparent: true,
+        opacity: 0,
+      });
+      const mesh = new THREE.Mesh(nodeSphereGeo, mat);
+      mesh.position.copy(node.position);
+      mesh.scale.setScalar(size);
+      mesh.userData = {
+        baseSize: size,
+        baseColor: baseColor.clone(),
+        currentOpacity: 0,
+        nodeIndex: node.index,
+        langData: {
+          id: node.id,
+          name: node.name,
+          family: node.family,
+          branch: node.branch,
+          status: node.status,
+          speakers: node.speakers,
+          continent: node.continent,
+          depth: node.depth || 0,
+          descendants: node.descendantCount,
+        },
+      };
+      worldGroup.add(mesh);
+      nodeMeshes.push(mesh);
+    }
+
+    // ================================================================
+    // EDGE SHADER
+    // ================================================================
+    const edgeVS = `
+      attribute float aPhaseOffset;
+      attribute float aFiberSpeed;
+      attribute float aEdgeProgress;
+      attribute float aRevealTime;
+      attribute float aDirection;
+      attribute vec3 aColor;
+
+      uniform float uTime;
+      uniform float uCascadeTime;
+      uniform float uGrowDuration;
+      uniform float uSteadyMix;
+      uniform float uGlobalAlpha;
+
+      varying float vEdgeProgress;
+      varying float vFiberAlpha;
+      varying float vCascadeAlpha;
+      varying float vSteadyMix;
+      varying float vGlobalAlpha;
+      varying float vPhaseOffset;
+      varying float vFiberSpeed;
+      varying vec3 vEdgeColor;
+
+      void main() {
+        vEdgeProgress = aEdgeProgress;
+        vPhaseOffset = aPhaseOffset;
+        vFiberSpeed = aFiberSpeed;
+        vSteadyMix = uSteadyMix;
+        vGlobalAlpha = uGlobalAlpha;
+        vEdgeColor = aColor;
+
+        // CASCADE GROW
+        float cascadeElapsed = uCascadeTime - aRevealTime;
+        float growFrac = clamp(cascadeElapsed / uGrowDuration, 0.0, 1.0);
+        growFrac = 1.0 - pow(1.0 - growFrac, 2.5);
+        float localProg = aDirection > 0.0 ? aEdgeProgress : 1.0 - aEdgeProgress;
+        float visible = smoothstep(localProg - 0.01, localProg + 0.01, growFrac);
+        float tipDist = growFrac - localProg;
+        float tip = exp(-tipDist * tipDist * 300.0) * step(0.0, cascadeElapsed);
+        vCascadeAlpha = cascadeElapsed >= 0.0 ? (visible * 0.55 + tip * 0.45) : 0.0;
+
+        // FIBER OPTIC — two pulses
+        float fiberPos1 = fract(uTime * aFiberSpeed + aPhaseOffset);
+        float fiberPos2 = fract(uTime * aFiberSpeed + aPhaseOffset + 0.5);
+        float d1a = abs(aEdgeProgress - fiberPos1);
+        float d1 = min(d1a, 1.0 - d1a);
+        float d2a = abs(aEdgeProgress - fiberPos2);
+        float d2 = min(d2a, 1.0 - d2a);
+        vFiberAlpha = max(exp(-d1 * d1 * 500.0), exp(-d2 * d2 * 500.0));
+
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `;
+
+    const edgeFS = `
+      uniform float uTime;
+
+      varying float vEdgeProgress;
+      varying float vFiberAlpha;
+      varying float vCascadeAlpha;
+      varying float vSteadyMix;
+      varying float vGlobalAlpha;
+      varying vec3 vEdgeColor;
+
+      void main() {
+        float baseAlpha = 0.24;
+        float fiberBoost = vFiberAlpha * 0.6;
+        float steadyAlpha = baseAlpha + fiberBoost;
+
+        vec3 steadyColor = vEdgeColor;
+        steadyColor = mix(steadyColor, vec3(1.0, 0.88, 0.75), vFiberAlpha * 0.9);
+
+        vec3 cascadeColor = vec3(0.95, 0.88, 0.8);
+
+        float alpha = mix(vCascadeAlpha, steadyAlpha, vSteadyMix) * vGlobalAlpha;
+        vec3 color = mix(cascadeColor, steadyColor, vSteadyMix);
+
+        if (alpha < 0.001) discard;
+        gl_FragColor = vec4(color, alpha);
+      }
+    `;
+
+    // Build edge geometry
+    const ePos = [], ePhase = [], eFiber = [], eProg = [], eReveal = [], eDir = [], eCol = [];
+    const _tmpEdgeColor = new THREE.Color();
+
+    for (const edge of graphData.edges) {
+      const a = graphData.nodes[edge.sourceIdx].position;
+      const b = graphData.nodes[edge.targetIdx].position;
+      // Edge color from source node's family
+      const srcFamily = graphData.nodes[edge.sourceIdx].family;
+      const fc = FAMILY_COLORS[srcFamily] || [0.0, 0.8, 0.5];
+      _tmpEdgeColor.setHSL(fc[0], fc[1], fc[2]);
+      _tmpEdgeColor.multiplyScalar(0.55);
+      for (let s = 0; s < SEGMENTS_PER_EDGE; s++) {
+        const t0 = s / SEGMENTS_PER_EDGE;
+        const t1 = (s + 1) / SEGMENTS_PER_EDGE;
+        ePos.push(
+          a.x+(b.x-a.x)*t0, a.y+(b.y-a.y)*t0, a.z+(b.z-a.z)*t0,
+          a.x+(b.x-a.x)*t1, a.y+(b.y-a.y)*t1, a.z+(b.z-a.z)*t1
+        );
+        ePhase.push(edge.phaseOffset, edge.phaseOffset);
+        eFiber.push(edge.fiberSpeed, edge.fiberSpeed);
+        eProg.push(t0, t1);
+        eReveal.push(edge.cascadeRevealTime, edge.cascadeRevealTime);
+        eDir.push(edge.cascadeDirection, edge.cascadeDirection);
+        eCol.push(_tmpEdgeColor.r, _tmpEdgeColor.g, _tmpEdgeColor.b,
+                  _tmpEdgeColor.r, _tmpEdgeColor.g, _tmpEdgeColor.b);
+      }
+    }
+
+    const edgeGeo = new THREE.BufferGeometry();
+    edgeGeo.setAttribute('position',      new THREE.Float32BufferAttribute(ePos, 3));
+    edgeGeo.setAttribute('aPhaseOffset',  new THREE.Float32BufferAttribute(ePhase, 1));
+    edgeGeo.setAttribute('aFiberSpeed',   new THREE.Float32BufferAttribute(eFiber, 1));
+    edgeGeo.setAttribute('aEdgeProgress', new THREE.Float32BufferAttribute(eProg, 1));
+    edgeGeo.setAttribute('aRevealTime',   new THREE.Float32BufferAttribute(eReveal, 1));
+    edgeGeo.setAttribute('aDirection',    new THREE.Float32BufferAttribute(eDir, 1));
+    edgeGeo.setAttribute('aColor',        new THREE.Float32BufferAttribute(eCol, 3));
+
+    const edgeMat = new THREE.ShaderMaterial({
+      vertexShader: edgeVS,
+      fragmentShader: edgeFS,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: {
+        uTime:         { value: 0 },
+        uCascadeTime:  { value: 0 },
+        uGrowDuration: { value: EDGE_GROW_DUR },
+        uSteadyMix:    { value: 0 },
+        uGlobalAlpha:  { value: 1 },
+      },
+    });
+
+    const edgeMesh = new THREE.LineSegments(edgeGeo, edgeMat);
+    worldGroup.add(edgeMesh);
+
+    // ================================================================
+    // AMBIENT PARTICLES
+    // ================================================================
+    const particleCount = 350;
+    const pPos = new Float32Array(particleCount * 3);
+    const pColors = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      pPos[i*3]   = (Math.random()-0.5) * SPREAD * 4;
+      pPos[i*3+1] = (Math.random()-0.5) * SPREAD * 4;
+      pPos[i*3+2] = (Math.random()-0.5) * SPREAD * 4;
+      const r = 0.3 + Math.random() * 0.4;
+      pColors[i*3] = r; pColors[i*3+1] = r*0.15; pColors[i*3+2] = r*0.1;
+    }
+    const pGeo = new THREE.BufferGeometry();
+    pGeo.setAttribute('position', new THREE.Float32BufferAttribute(pPos, 3));
+    pGeo.setAttribute('color', new THREE.Float32BufferAttribute(pColors, 3));
+    const pMat = new THREE.PointsMaterial({
+      size: 2, transparent: true, opacity: 0.35,
+      vertexColors: true, blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    worldGroup.add(new THREE.Points(pGeo, pMat));
+
+    // ================================================================
+    // CASCADE STATE MACHINE
+    // ================================================================
+    let phase = 'cascade';
+    let phaseTime = 0;
+    let cascadeTime = 0;
+    let globalElapsed = 0;
+
+    function updateEdgeAttributes() {
+      const revealAttr = edgeGeo.getAttribute('aRevealTime');
+      const dirAttr = edgeGeo.getAttribute('aDirection');
+      let vi = 0;
+      for (const edge of graphData.edges) {
+        for (let s = 0; s < SEGMENTS_PER_EDGE; s++) {
+          revealAttr.array[vi] = edge.cascadeRevealTime;
+          dirAttr.array[vi] = edge.cascadeDirection;
+          vi++;
+          revealAttr.array[vi] = edge.cascadeRevealTime;
+          dirAttr.array[vi] = edge.cascadeDirection;
+          vi++;
+        }
+      }
+      revealAttr.needsUpdate = true;
+      dirAttr.needsUpdate = true;
+    }
+
+    // Startup: staggered cascade across all families
+    runStaggeredCascade();
+    updateEdgeAttributes();
+    let isFirstCascade = true;
+    let cascadeFamily = null; // null = all families (startup), string = single family
+
+    function startNewCascade() {
+      // Pick a random major family (with enough nodes to look good)
+      const bigFamilies = [...familyGroups.entries()].filter(([, idx]) => idx.length >= 8);
+      const [fam, indices] = bigFamilies[Math.floor(Math.random() * bigFamilies.length)];
+      cascadeFamily = fam;
+
+      const ns = graphData.nodes;
+      const es = graphData.edges;
+      // Reset all reveal times
+      for (const n of ns) n.cascadeRevealTime = Infinity;
+      for (const e of es) { e.cascadeRevealTime = Infinity; e.cascadeDirection = 1; }
+
+      // BFS within this family only
+      const nodeSet = new Set(indices);
+      // Pick epicenter near centroid
+      let cx = 0, cy = 0, cz = 0;
+      for (const ni of indices) { cx += ns[ni].position.x; cy += ns[ni].position.y; cz += ns[ni].position.z; }
+      cx /= indices.length; cy /= indices.length; cz /= indices.length;
+      let bestDist = Infinity, bestIdx = indices[0];
+      for (const ni of indices) {
+        const dx = ns[ni].position.x - cx, dy = ns[ni].position.y - cy, dz = ns[ni].position.z - cz;
+        const d = dx*dx + dy*dy + dz*dz;
+        if (d < bestDist) { bestDist = d; bestIdx = ni; }
+      }
+      runBFS(bestIdx, 0, nodeSet);
+
+      // Fill unreached within family; non-family edges stay at 9999 (never reached)
+      let maxT = 0;
+      for (const ni of indices) if (ns[ni].cascadeRevealTime < Infinity && ns[ni].cascadeRevealTime > maxT) maxT = ns[ni].cascadeRevealTime;
+      for (const ni of indices) if (ns[ni].cascadeRevealTime === Infinity) ns[ni].cascadeRevealTime = maxT;
+      for (const n of ns) if (n.cascadeRevealTime === Infinity) n.cascadeRevealTime = 9999;
+      for (const e of es) if (e.cascadeRevealTime === Infinity) e.cascadeRevealTime = 9999;
+
+      updateEdgeAttributes();
+      cascadeTime = 0;
+      isFirstCascade = false;
+    }
+
+    // ================================================================
+    // MOUSE + ZOOM + DRAG
+    // ================================================================
+    const mouse = new THREE.Vector2(0, 0);
+    let isDragging = false;
+    let dragStartX = 0, dragStartY = 0;
+    let dragRotY = 0, dragRotX = 0;
+    let dragBaseY = 0, dragBaseX = 0;
+
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      if (isDragging) {
+        dragRotY = dragBaseY + (e.clientX - dragStartX) * 0.004;
+        dragRotX = dragBaseX + (e.clientY - dragStartY) * 0.004;
+      }
+    });
+
+    window.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      dragBaseY = dragRotY;
+      dragBaseX = dragRotX;
+      renderer.domElement.style.cursor = 'grabbing';
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+      renderer.domElement.style.cursor = hoveredMesh ? 'pointer' : 'grab';
+    });
+
+    renderer.domElement.style.cursor = 'grab';
+
+    let targetZoom = 2800;
+    const ZOOM_MIN = 400;
+    const ZOOM_MAX = 8000;
+    window.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      targetZoom += e.deltaY * 2;
+      targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, targetZoom));
+    }, { passive: false });
+
+    // ================================================================
+    // TOOLTIP — RAYCASTER + TIME PERIODS + INTERACTION
+    // ================================================================
+    const raycaster = new THREE.Raycaster();
+    raycaster.params.Mesh = { threshold: 0.5 };
+    const tooltipEl = document.getElementById('tooltip');
+    let hoveredMesh = null;
+    let pinnedMesh = null;
+    let lastMouseX = 0, lastMouseY = 0;
+
+    // Family proto-language origin dates (years, negative = BC)
+    const FAMILY_ORIGINS = {
+      'Afroasiatic':-10000,'Niger-Congo':-5000,'Nilo-Saharan':-6000,
+      'Indo-European':-4500,'Uralic':-5000,'Kartvelian':-3000,
+      'Northeast Caucasian':-4000,'Northwest Caucasian':-3000,
+      'Sino-Tibetan':-5200,'Austronesian':-3500,'Austroasiatic':-3000,
+      'Kra-Dai':-2500,'Dravidian':-2500,'Hmong-Mien':-4000,
+      'Turkic':-500,'Mongolic':200,'Tungusic':500,
+      'Japonic':-300,'Koreanic':-300,
+      'Algic':-2500,'Na-Dene':-3000,'Uto-Aztecan':-3000,
+      'Mayan':-2000,'Oto-Manguean':-3500,'Quechuan':-1000,
+      'Tupian':-2000,'Arawakan':-2500,'Cariban':-2000,
+      'Chibchan':-2000,'Aymaran':-1500,
+      'Eskimo-Aleut':-3000,'Iroquoian':-1500,'Siouan':-1500,
+      'Salishan':-2000,'Trans-New Guinea':-8000,'Pama-Nyungan':-5000,
+      'Khoe-Kwadi':-2000,'Kx\'a':-10000,'Tuu':-10000,
+    };
+
+    // Well-known language dates override (sourced from Britannica, Glottolog, Ethnologue)
+    const KNOWN_DATES = {
+      // Proto-languages
+      lang_proto_indo_european:'c. 4500 – 2500 BC',
+      lang_proto_germanic:'c. 500 BC – 200 AD',
+      lang_proto_celtic:'c. 800 – 300 BC',
+      lang_proto_italic:'c. 1000 – 500 BC',
+      lang_proto_slavic:'c. 200 BC – 500 AD',
+      lang_proto_balto_slavic:'c. 1500 – 500 BC',
+      lang_proto_indo_iranian:'c. 2500 – 1500 BC',
+      lang_proto_anatolian:'c. 3500 – 2000 BC',
+      lang_proto_sino_tibetan:'c. 5200 – 4000 BC',
+      lang_proto_austronesian:'c. 3500 – 3000 BC',
+      lang_proto_afroasiatic:'c. 10000 – 8000 BC',
+      lang_proto_semitic:'c. 4000 – 3000 BC',
+      lang_proto_niger_congo:'c. 5000 – 3000 BC',
+      lang_proto_bantu:'c. 3000 – 2000 BC',
+      lang_proto_uralic:'c. 5000 – 3000 BC',
+      lang_proto_turkic:'c. 500 BC – 100 AD',
+      lang_proto_dravidian:'c. 2500 – 1500 BC',
+      // Anatolian
+      lang_hittite:'c. 1650 – 1180 BC',lang_palaic:'c. 1500 – 1300 BC',
+      lang_cuneiform_luwian:'c. 1400 – 1200 BC',lang_lydian:'c. 700 – 200 BC',
+      lang_lycian:'c. 500 – 200 BC',lang_carian:'c. 600 – 200 BC',
+      // Tocharian
+      lang_tocharian_a:'c. 600 – 900 AD',lang_tocharian_b:'c. 600 – 1000 AD',
+      // Greek
+      lang_mycenaean_greek:'c. 1600 – 1100 BC',lang_ancient_greek:'c. 800 – 300 BC',
+      lang_koine_greek:'c. 300 BC – 600 AD',lang_medieval_greek:'c. 600 – 1453 AD',
+      lang_modern_greek:'c. 1453 – present',
+      // Italic / Romance
+      lang_latin:'c. 700 BC – 600 AD',lang_oscan:'c. 500 – 100 BC',
+      lang_umbrian:'c. 500 – 100 BC',lang_old_french:'c. 842 – 1300 AD',
+      lang_french:'c. 1500 – present',lang_spanish:'c. 1200 – present',
+      lang_portuguese:'c. 1200 – present',lang_italian:'c. 1300 – present',
+      lang_romanian:'c. 1500 – present',lang_catalan:'c. 1200 – present',
+      // Celtic
+      lang_gaulish:'c. 600 BC – 500 AD',lang_celtiberian:'c. 200 BC – 100 AD',
+      lang_old_irish:'c. 600 – 900 AD',lang_middle_irish:'c. 900 – 1200 AD',
+      lang_irish:'c. 1200 – present',lang_welsh:'c. 600 – present',
+      lang_scottish_gaelic:'c. 1300 – present',lang_breton:'c. 600 – present',
+      // Germanic
+      lang_gothic:'c. 350 – 600 AD',lang_old_english:'c. 450 – 1100 AD',
+      lang_middle_english:'c. 1100 – 1500 AD',lang_english:'c. 1500 – present',
+      lang_old_norse:'c. 700 – 1300 AD',lang_old_high_german:'c. 750 – 1050 AD',
+      lang_middle_high_german:'c. 1050 – 1350 AD',lang_german:'c. 1500 – present',
+      lang_dutch:'c. 1500 – present',lang_swedish:'c. 1500 – present',
+      lang_danish:'c. 1500 – present',lang_norwegian:'c. 1500 – present',
+      lang_icelandic:'c. 1200 – present',
+      // Slavic
+      lang_old_church_slavonic:'c. 860 – 1100 AD',
+      lang_russian:'c. 1400 – present',lang_polish:'c. 1000 – present',
+      lang_czech:'c. 1300 – present',lang_ukrainian:'c. 1400 – present',
+      lang_serbian:'c. 1200 – present',lang_croatian:'c. 1200 – present',
+      lang_bulgarian:'c. 900 – present',
+      // Armenian & Albanian
+      lang_classical_armenian:'c. 405 – 1100 AD',
+      lang_eastern_armenian:'c. 1700 – present',lang_western_armenian:'c. 1700 – present',
+      // Indo-Iranian
+      lang_vedic_sanskrit:'c. 1500 – 500 BC',lang_sanskrit:'c. 500 BC – 300 AD',
+      lang_pali:'c. 600 BC – present',lang_avestan:'c. 1200 – 400 BC',
+      lang_old_persian:'c. 525 – 300 BC',lang_middle_persian:'c. 300 BC – 700 AD',
+      lang_persian:'c. 800 – present',lang_hindi:'c. 1300 – present',
+      lang_urdu:'c. 1500 – present',lang_bengali:'c. 1000 – present',
+      lang_punjabi:'c. 1000 – present',lang_marathi:'c. 1100 – present',
+      lang_gujarati:'c. 1200 – present',lang_nepali:'c. 1300 – present',
+      lang_sinhalese:'c. 300 BC – present',lang_kurdish:'c. 800 – present',
+      // Uralic
+      lang_finnish:'c. 1500 – present',lang_estonian:'c. 1500 – present',
+      lang_hungarian:'c. 1000 – present',
+      // Semitic
+      lang_akkadian:'c. 2800 – 500 BC',lang_eblaite:'c. 2400 – 2250 BC',
+      lang_phoenician:'c. 1050 – 150 BC',
+      lang_biblical_hebrew:'c. 1200 – 200 BC',lang_hebrew:'c. 1880 – present',
+      lang_aramaic:'c. 1100 BC – present',lang_arabic:'c. 600 – present',
+      lang_ge_ez:'c. 400 BC – present (liturgical)',
+      lang_amharic:'c. 1300 – present',lang_tigrinya:'c. 1300 – present',
+      // Egyptian
+      lang_ancient_egyptian:'c. 3200 – 600 BC',lang_coptic:'c. 200 – 1600 AD',
+      // Sino-Tibetan
+      lang_old_chinese:'c. 1250 – 200 BC',lang_middle_chinese:'c. 600 – 1200 AD',
+      lang_mandarin:'c. 1350 – present',lang_cantonese:'c. 1000 – present',
+      lang_classical_tibetan:'c. 650 – present (literary)',
+      lang_burmese:'c. 1100 – present',
+      // Japonic & Koreanic
+      lang_old_japanese:'c. 700 – 800 AD',lang_middle_japanese:'c. 800 – 1600 AD',
+      lang_japanese:'c. 1600 – present',
+      lang_old_korean:'c. 500 – 935 AD',lang_middle_korean:'c. 935 – 1600 AD',
+      lang_korean:'c. 1600 – present',
+      // Turkic
+      lang_old_turkic:'c. 550 – 1200 AD',lang_turkish:'c. 1300 – present',
+      lang_azerbaijani:'c. 1100 – present',lang_uzbek:'c. 1400 – present',
+      // Austronesian
+      lang_malay:'c. 700 – present',lang_javanese:'c. 800 – present',
+      lang_tagalog:'c. 900 – present',lang_hawaiian:'c. 1000 – present',
+      lang_maori:'c. 1200 – present',lang_malagasy:'c. 800 – present',
+      // African
+      lang_swahili:'c. 1100 – present',lang_zulu:'c. 1600 – present',
+      lang_yoruba:'c. 1000 – present',lang_hausa:'c. 1000 – present',
+      lang_igbo:'c. 900 – present',lang_somali:'c. 1200 – present',
+      lang_oromo:'c. 1400 – present',lang_wolof:'c. 1200 – present',
+      // Americas
+      lang_classical_nahuatl:'c. 1300 – 1600 AD',lang_nahuatl:'c. 1600 – present',
+      lang_navajo:'c. 1400 – present',lang_quechua:'c. 1400 – present',
+      lang_guarani:'c. 1400 – present',lang_cherokee:'c. 1300 – present',
+      lang_maya:'c. 1000 – present',lang_aymara:'c. 1200 – present',
+      // Isolates & ancient
+      lang_basque:'c. 1000 BC – present',lang_sumerian:'c. 3500 – 2000 BC',
+      lang_elamite:'c. 2600 – 400 BC',lang_etruscan:'c. 700 – 100 BC',
+      lang_hurrian:'c. 2300 – 1200 BC',lang_urartian:'c. 860 – 585 BC',
+      lang_manchu:'c. 1600 – present',lang_ainu:'c. 1300 – present',
+    };
+
+    // Max depth per family (cached)
+    const familyMaxDepth = {};
+    graphData.nodes.forEach(n => {
+      familyMaxDepth[n.family] = Math.max(familyMaxDepth[n.family] || 0, n.depth);
+    });
+
+    function formatYear(y) {
+      if (y < 0) return `${Math.abs(y)} BC`;
+      return `AD ${y}`;
+    }
+
+    function estimateTimePeriod(d) {
+      if (KNOWN_DATES[d.id]) return KNOWN_DATES[d.id];
+
+      const depth = typeof d.depth === 'number' ? d.depth : 0;
+      const origin = FAMILY_ORIGINS[d.family] || -2000;
+      const maxD = Math.max(1, familyMaxDepth[d.family] || 1);
+      const ratio = Math.min(1, depth / maxD);
+      const startYear = Math.round(origin + (2026 - origin) * ratio);
+
+      if (isNaN(startYear)) {
+        if (d.status === 'alive') return 'Modern era – present';
+        if (d.status === 'extinct') return 'Historical';
+        return 'Unknown period';
+      }
+
+      if (d.name.startsWith('Proto-')) {
+        return `c. ${formatYear(startYear)} (reconstructed)`;
+      }
+
+      if (d.status === 'alive' || d.status === 'moribund') {
+        const age = Math.max(80, Math.round((2026 - origin) / maxD * 0.6));
+        const start = startYear - age;
+        return `c. ${formatYear(start)} – present`;
+      }
+
+      // Extinct
+      const lifespan = Math.max(150, Math.round((2026 - origin) / maxD * 0.45));
+      const end = Math.min(2026, startYear + Math.round(lifespan * 0.5));
+      return `c. ${formatYear(startYear)} – ${formatYear(end)}`;
+    }
+
+    function formatSpeakers(n) {
+      if (!n || n <= 0) return null;
+      if (n >= 1e9) return `~${(n/1e9).toFixed(1)}B`;
+      if (n >= 1e6) return `~${(n/1e6).toFixed(1)}M`;
+      if (n >= 1e3) return `~${(n/1e3).toFixed(1)}K`;
+      return `~${n}`;
+    }
+
+    function buildTooltipHTML(d, pinned) {
+      const statusClass = `tt-status-${d.status}`;
+      const statusLabel = d.status === 'alive' ? 'Living' :
+                          d.status === 'moribund' ? 'Moribund' : 'Extinct';
+      const period = estimateTimePeriod(d);
+      const speakers = formatSpeakers(d.speakers);
+      const branch = d.branch || '(root)';
+      const desc = d.descendants;
+
+      let html = '';
+      if (pinned) html += '<span class="tt-pinned">[ PINNED ]</span>';
+      html += `<div class="tt-header">> ${d.name}</div>`;
+      html += `<div class="tt-row"><span class="tt-label">family</span><span class="tt-value">${d.family}</span></div>`;
+      html += `<div class="tt-row"><span class="tt-label">branch</span><span class="tt-value">${branch}</span></div>`;
+      html += `<div class="tt-row"><span class="tt-label">period</span><span class="tt-value">${period}</span></div>`;
+      html += `<div class="tt-row"><span class="tt-label">status</span><span class="tt-value ${statusClass}">${statusLabel}</span></div>`;
+      if (speakers) {
+        html += `<div class="tt-row"><span class="tt-label">speakers</span><span class="tt-value">${speakers}</span></div>`;
+      }
+      html += `<div class="tt-row"><span class="tt-label">region</span><span class="tt-value">${d.continent}</span></div>`;
+      if (desc > 0) {
+        html += `<div class="tt-row"><span class="tt-label">descendants</span><span class="tt-value">${desc} language${desc > 1 ? 's' : ''}</span></div>`;
+      }
+      return html;
+    }
+
+    function showTooltip(d, x, y, pinned) {
+      tooltipEl.innerHTML = buildTooltipHTML(d, pinned);
+      tooltipEl.style.display = 'block';
+      // Position: offset from cursor, keep within viewport
+      const pad = 16;
+      let tx = x + pad;
+      let ty = y + pad;
+      const rect = tooltipEl.getBoundingClientRect();
+      if (tx + rect.width > window.innerWidth - pad) tx = x - rect.width - pad;
+      if (ty + rect.height > window.innerHeight - pad) ty = y - rect.height - pad;
+      tooltipEl.style.left = tx + 'px';
+      tooltipEl.style.top = ty + 'px';
+    }
+
+    function hideTooltip() {
+      tooltipEl.style.display = 'none';
+    }
+
+    // No-op highlight — keep original node color
+    function highlightNode(mesh) {}
+    function unhighlightNode() {}
+
+    // Raycast on mousemove (throttled)
+    let raycastTimer = null;
+    window.addEventListener('mousemove', (e) => {
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+      if (isDragging) return; // keep tooltip visible while dragging
+      if (raycastTimer) return;
+      raycastTimer = setTimeout(() => {
+        raycastTimer = null;
+        doRaycast(e.clientX, e.clientY);
+      }, 30);
+    });
+
+    function doRaycast(mx, my) {
+      const ndc = new THREE.Vector2(
+        (mx / window.innerWidth) * 2 - 1,
+        -(my / window.innerHeight) * 2 + 1
+      );
+      raycaster.setFromCamera(ndc, camera);
+      const hits = raycaster.intersectObjects(nodeMeshes, false);
+
+      if (hits.length > 0) {
+        const mesh = hits[0].object;
+        const d = mesh.userData.langData;
+        hoveredMesh = mesh;
+        highlightNode(mesh);
+        if (!pinnedMesh) showTooltip(d, mx, my, false);
+        renderer.domElement.style.cursor = 'pointer';
+      } else {
+        hoveredMesh = null;
+        if (!pinnedMesh) { hideTooltip(); unhighlightNode(); }
+        if (!isDragging) renderer.domElement.style.cursor = 'grab';
+      }
+    }
+
+    // Click to pin/unpin tooltip
+    window.addEventListener('click', (e) => {
+      // Ignore if drag was significant
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+      if (Math.abs(dx) + Math.abs(dy) > 6) return;
+
+      if (hoveredMesh) {
+        if (pinnedMesh === hoveredMesh) {
+          // Unpin
+          pinnedMesh = null;
+          unhighlightNode();
+          hideTooltip();
+        } else {
+          // Pin new
+          pinnedMesh = hoveredMesh;
+          const d = hoveredMesh.userData.langData;
+          highlightNode(hoveredMesh);
+          showTooltip(d, e.clientX, e.clientY, true);
+        }
+      } else {
+        // Click empty space — unpin
+        if (pinnedMesh) {
+          pinnedMesh = null;
+          unhighlightNode();
+          hideTooltip();
+        }
+      }
+    });
+
+    // ================================================================
+    // ANIMATION LOOP
+    // ================================================================
+    const clock = new THREE.Clock();
+    const NODE_FADE_DUR = 0.6;
+    let autoRotAngle = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.05);
+      globalElapsed += dt;
+      phaseTime += dt;
+
+      let steadyMix, globalAlpha;
+
+      // Startup: sequential all-family cascade → settle → steady
+      // Then loop: fadeout → dark → single-family cascade → familySettle → steady → ...
+      switch (phase) {
+        case 'cascade':
+          cascadeTime += dt;
+          steadyMix = 0;
+          globalAlpha = 1;
+          if (isFirstCascade) {
+            // Startup cascade — wait for all families to finish then settle
+            if (phaseTime >= startupCascadeDuration) { phase = 'settle'; phaseTime = 0; }
+          } else {
+            // Single-family cascade — 5s burst then settle back to full colorful state
+            if (phaseTime >= 5) { phase = 'familySettle'; phaseTime = 0; }
+          }
+          break;
+        case 'settle':
+          // Only used after startup: transition from cascade glow to steady fiber-optic
+          cascadeTime += dt;
+          steadyMix = Math.min(1, phaseTime / SETTLE_DUR);
+          steadyMix = steadyMix * steadyMix * (3 - 2 * steadyMix);
+          globalAlpha = 1;
+          if (phaseTime >= SETTLE_DUR) { phase = 'steady'; phaseTime = 0; }
+          break;
+        case 'steady':
+          // All families visible with fiber-optic edges
+          cascadeFamily = null;
+          isFirstCascade = false;
+          steadyMix = 1; globalAlpha = 1;
+          if (phaseTime >= STEADY_DUR) { phase = 'fadeout'; phaseTime = 0; }
+          break;
+        case 'fadeout':
+          // Fade all edges before going dark
+          steadyMix = 1;
+          globalAlpha = 1 - Math.min(1, phaseTime / FADEOUT_DUR);
+          globalAlpha *= globalAlpha;
+          if (phaseTime >= FADEOUT_DUR) { phase = 'dark'; phaseTime = 0; }
+          break;
+        case 'dark':
+          // Brief darkness then start single-family cascade
+          steadyMix = 0; globalAlpha = 0;
+          if (phaseTime >= DARK_DUR) { startNewCascade(); phase = 'cascade'; phaseTime = 0; }
+          break;
+        case 'familySettle':
+          // After single-family cascade, transition back to full colorful steady state
+          cascadeTime += dt;
+          cascadeFamily = null; // all families now
+          steadyMix = Math.min(1, phaseTime / SETTLE_DUR);
+          steadyMix = steadyMix * steadyMix * (3 - 2 * steadyMix);
+          globalAlpha = 1;
+          if (phaseTime >= SETTLE_DUR) { phase = 'steady'; phaseTime = 0; }
+          break;
+      }
+
+      // Rotation + zoom — auto-rotation pauses while dragging
+      if (!isDragging) autoRotAngle += dt * 0.06;
+      worldGroup.rotation.y = autoRotAngle + dragRotY;
+      worldGroup.rotation.x = dragRotX + (isDragging ? 0 : mouse.y * 0.1 * 0.02);
+      camera.position.z += (targetZoom - camera.position.z) * 0.08;
+
+      // Update nodes
+      for (let i = 0; i < NODE_COUNT; i++) {
+        const node = graphData.nodes[i];
+        const mesh = nodeMeshes[i];
+        const ud = mesh.userData;
+
+        let targetOp;
+        const isActiveFamily = !cascadeFamily || node.family === cascadeFamily;
+        if (phase === 'cascade' || phase === 'settle') {
+          if (isActiveFamily) {
+            const tr = cascadeTime - node.cascadeRevealTime;
+            const fadeIn = Math.max(0, Math.min(1, tr / NODE_FADE_DUR));
+            targetOp = 0.08 + fadeIn * (0.85 + node.recency * 0.15);
+          } else {
+            // Non-active family: dimmed but visible floating orbs
+            targetOp = 0.15;
+          }
+        } else if (phase === 'steady' || phase === 'familySettle') {
+          targetOp = 0.85 + node.recency * 0.15;
+        } else if (phase === 'fadeout') {
+          targetOp = (0.85 + node.recency * 0.15) * globalAlpha;
+        } else if (phase === 'dark') {
+          // All nodes dimmed but visible between cascades
+          targetOp = 0.08;
+        } else {
+          targetOp = 0;
+        }
+
+        ud.currentOpacity += (targetOp - ud.currentOpacity) * Math.min(1, dt * 4);
+        mesh.material.opacity = ud.currentOpacity;
+
+        const pulse = 1 + 0.04 * Math.sin(globalElapsed * 1.2 + i * 0.5);
+        let scaleMul = 1;
+        if (phase === 'cascade' && isActiveFamily) {
+          const tr = cascadeTime - node.cascadeRevealTime;
+          if (tr < 0) scaleMul = 0.3;
+          else if (tr < 0.5) scaleMul = 0.3 + 0.7 * (1 - Math.pow(1 - tr / 0.5, 3));
+        } else if (phase === 'cascade' && !isActiveFamily) {
+          scaleMul = 0.7;
+        } else if (phase === 'dark') {
+          scaleMul = 0.7;
+        }
+        mesh.scale.setScalar(ud.baseSize * pulse * scaleMul);
+        mesh.position.copy(node.position);
+      }
+
+      // Update edge positions (static — just needs first-frame copy)
+      if (globalElapsed < 0.1) {
+        const posAttr = edgeGeo.getAttribute('position');
+        let vi = 0;
+        for (const edge of graphData.edges) {
+          const a = graphData.nodes[edge.sourceIdx].position;
+          const b = graphData.nodes[edge.targetIdx].position;
+          for (let s = 0; s < SEGMENTS_PER_EDGE; s++) {
+            const t0 = s / SEGMENTS_PER_EDGE;
+            const t1 = (s + 1) / SEGMENTS_PER_EDGE;
+            posAttr.array[vi*3]=a.x+(b.x-a.x)*t0; posAttr.array[vi*3+1]=a.y+(b.y-a.y)*t0; posAttr.array[vi*3+2]=a.z+(b.z-a.z)*t0; vi++;
+            posAttr.array[vi*3]=a.x+(b.x-a.x)*t1; posAttr.array[vi*3+1]=a.y+(b.y-a.y)*t1; posAttr.array[vi*3+2]=a.z+(b.z-a.z)*t1; vi++;
+          }
+        }
+        posAttr.needsUpdate = true;
+      }
+
+      edgeMat.uniforms.uTime.value = globalElapsed;
+      edgeMat.uniforms.uCascadeTime.value = cascadeTime;
+      edgeMat.uniforms.uSteadyMix.value = steadyMix;
+      edgeMat.uniforms.uGlobalAlpha.value = globalAlpha;
+      edgeMat.uniforms.uGrowDuration.value = isFirstCascade ? STARTUP_GROW : EDGE_GROW_DUR;
+
+      // Update pinned tooltip position (follows node through rotation)
+      if (pinnedMesh) {
+        const pos = new THREE.Vector3();
+        pinnedMesh.getWorldPosition(pos);
+        pos.project(camera);
+        const sx = (pos.x * 0.5 + 0.5) * window.innerWidth;
+        const sy = (-pos.y * 0.5 + 0.5) * window.innerHeight;
+        showTooltip(pinnedMesh.userData.langData, sx, sy, true);
+      }
+
+      composer.render();
+    }
+
+    animate();
+
+    // ================================================================
+    // RESIZE
+    // ================================================================
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      composer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
