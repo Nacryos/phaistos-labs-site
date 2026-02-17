@@ -18,7 +18,7 @@
       -moz-osx-font-smoothing: grayscale;
       overflow-x: hidden;
     }
-    canvas { display: block; touch-action: pan-y; }
+    canvas { display: block; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 
     /* Fixed graph background */
     #graph-container {
@@ -28,6 +28,9 @@
       width: 100%;
       height: 100%;
       z-index: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
 
     /* Hero section — full viewport, centered text over graph */
@@ -42,6 +45,8 @@
       padding-left: clamp(40px, 6vw, 100px);
       pointer-events: none;
       user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
     #hero-title {
       font-size: clamp(48px, 7vw, 88px);
@@ -1181,6 +1186,7 @@
     let dragStartX = 0, dragStartY = 0;
     let dragRotY = 0, dragRotX = 0;
     let dragBaseY = 0, dragBaseX = 0;
+    let isHoldingNode = false; // true when user is holding down on a node (pauses auto-rotation)
 
     const graphEl = renderer.domElement;
 
@@ -1200,14 +1206,21 @@
       dragBaseY = dragRotY;
       dragBaseX = dragRotX;
       graphEl.style.cursor = 'grabbing';
+      // Check if mousedown is on a node — if so, pause auto-rotation
+      doRaycast(e.clientX, e.clientY);
+      if (hoveredMesh) isHoldingNode = true;
     });
 
     window.addEventListener('mouseup', () => {
       isDragging = false;
+      isHoldingNode = false;
       graphEl.style.cursor = hoveredMesh ? 'pointer' : 'grab';
     });
 
     graphEl.style.cursor = 'grab';
+
+    // Prevent text selection on the graph area (fixes long-press text highlight on touch)
+    graphEl.addEventListener('selectstart', (e) => e.preventDefault());
 
     let targetZoom = 2800;
     const BASE_ZOOM = 2800;
@@ -1282,6 +1295,7 @@
           if (!touchMoved) {
             doRaycast(t.clientX, t.clientY);
             if (hoveredMesh) {
+              isHoldingNode = true; // pause auto-rotation while holding node
               if (pinnedMesh === hoveredMesh) {
                 pinnedMesh = null; unhighlightNode(); hideTooltip();
               } else {
@@ -1335,6 +1349,7 @@
     renderer.domElement.addEventListener('touchend', (e) => {
       if (touchHoldTimer) { clearTimeout(touchHoldTimer); touchHoldTimer = null; }
       isTouchPinching = false;
+      isHoldingNode = false; // resume auto-rotation when finger lifts
       if (e.touches.length === 0) {
         isDragging = false;
         isTouchRotating = false;
@@ -1361,6 +1376,7 @@
       if (touchHoldTimer) { clearTimeout(touchHoldTimer); touchHoldTimer = null; }
       isDragging = false;
       isTouchRotating = false;
+      isHoldingNode = false;
     });
 
     // ================================================================
@@ -1735,8 +1751,8 @@
           break;
       }
 
-      // Rotation + zoom — auto-rotation pauses while dragging
-      if (!isDragging) autoRotAngle += dt * 0.06;
+      // Rotation + zoom — auto-rotation pauses while dragging or holding a node
+      if (!isDragging && !isHoldingNode) autoRotAngle += dt * 0.06;
       worldGroup.rotation.y = autoRotAngle + dragRotY;
       worldGroup.rotation.x = dragRotX + (isDragging ? 0 : mouse.y * 0.1 * 0.02);
       camera.position.z += (targetZoom - camera.position.z) * 0.08;
