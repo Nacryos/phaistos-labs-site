@@ -308,6 +308,270 @@
       color: rgba(255,255,255,0.2);
       letter-spacing: 1px;
     }
+    /* Search toggle button */
+    #search-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 150;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(5, 5, 7, 0.30);
+      backdrop-filter: blur(24px) saturate(1.2);
+      -webkit-backdrop-filter: blur(24px) saturate(1.2);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.2s, border-color 0.2s, opacity 0.3s;
+      opacity: 0.6;
+    }
+    #search-toggle:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.15);
+      opacity: 1;
+    }
+    #search-toggle svg {
+      width: 18px;
+      height: 18px;
+      stroke: rgba(255, 255, 255, 0.5);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    #search-toggle:hover svg {
+      stroke: rgba(255, 255, 255, 0.8);
+    }
+
+    /* Search panel */
+    #search-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 340px;
+      height: 100%;
+      z-index: 160;
+      background: rgba(5, 5, 7, 0.30);
+      backdrop-filter: blur(24px) saturate(1.2);
+      -webkit-backdrop-filter: blur(24px) saturate(1.2);
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 12.5px;
+      color: #ccc;
+      box-shadow: -4px 0 30px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+    #search-panel.open {
+      transform: translateX(0);
+    }
+    #search-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      flex-shrink: 0;
+    }
+    #search-panel-header span {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.35);
+    }
+    #search-close {
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.3);
+      cursor: pointer;
+      font-size: 18px;
+      padding: 0 4px;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+    #search-close:hover {
+      color: rgba(255, 255, 255, 0.7);
+    }
+    #search-input-wrap {
+      padding: 12px 18px;
+      flex-shrink: 0;
+    }
+    #search-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      padding: 9px 12px;
+      color: #eee;
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #search-input::placeholder {
+      color: rgba(255, 255, 255, 0.2);
+    }
+    #search-input:focus {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    #search-presets {
+      padding: 4px 18px 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    #search-presets:empty {
+      display: none;
+    }
+    .search-preset {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 12px;
+      padding: 4px 10px;
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.35);
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      white-space: nowrap;
+    }
+    .search-preset:hover {
+      color: rgba(255, 255, 255, 0.6);
+      border-color: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .search-preset.active {
+      color: rgba(255, 180, 120, 0.8);
+      border-color: rgba(255, 180, 120, 0.2);
+      background: rgba(255, 180, 120, 0.06);
+    }
+    #search-results {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.08) transparent;
+    }
+    #search-results::-webkit-scrollbar {
+      width: 4px;
+    }
+    #search-results::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.08);
+      border-radius: 2px;
+    }
+    .search-section-label {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.2);
+      padding: 10px 18px 4px;
+    }
+    .search-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 18px;
+      cursor: pointer;
+      transition: background 0.15s;
+      user-select: none;
+    }
+    .search-row:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .search-row.selected {
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .search-row-check {
+      width: 14px;
+      height: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .search-row.selected .search-row-check {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .search-row.selected .search-row-check::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 1px;
+    }
+    .search-row-name {
+      flex: 1;
+      color: rgba(255, 255, 255, 0.65);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .search-row.selected .search-row-name {
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .search-row-tag {
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .search-row-tag.tag-F {
+      color: rgba(255, 180, 120, 0.7);
+      background: rgba(255, 180, 120, 0.08);
+    }
+    .search-row-tag.tag-B {
+      color: rgba(120, 180, 255, 0.7);
+      background: rgba(120, 180, 255, 0.08);
+    }
+    .search-row-tag.tag-L {
+      color: rgba(180, 255, 160, 0.6);
+      background: rgba(180, 255, 160, 0.06);
+    }
+    .search-stats {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.25);
+      padding: 4px 18px 8px 44px;
+      line-height: 1.5;
+    }
+    #search-clear-all {
+      flex-shrink: 0;
+      padding: 12px 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      text-align: center;
+    }
+    #search-clear-btn {
+      background: none;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      color: rgba(255, 255, 255, 0.3);
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 7px 20px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    #search-clear-btn:hover {
+      color: rgba(255, 255, 255, 0.6);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
     /* Mobile: keep title left-aligned but compact so graph is visible */
     @media (max-width: 768px) {
       #hero {
@@ -352,6 +616,15 @@
       }
       .tt-label {
         min-width: 64px;
+      }
+      #search-panel {
+        width: 100%;
+      }
+      #search-toggle {
+        top: 12px;
+        right: 12px;
+        width: 36px;
+        height: 36px;
       }
     }
   </style>
@@ -398,6 +671,25 @@
   </div>
 
   <div id="tooltip"></div>
+
+  <button id="search-toggle" title="Search languages (Ctrl+K)">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+  </button>
+
+  <div id="search-panel">
+    <div id="search-panel-header">
+      <span>Search Languages</span>
+      <button id="search-close">&times;</button>
+    </div>
+    <div id="search-input-wrap">
+      <input id="search-input" type="text" placeholder="Type to search..." autocomplete="off" spellcheck="false" />
+    </div>
+    <div id="search-presets"></div>
+    <div id="search-results"></div>
+    <div id="search-clear-all">
+      <button id="search-clear-btn">Clear All</button>
+    </div>
+  </div>
 
   <!-- Scroll-based transitions -->
   <script>
@@ -750,6 +1042,529 @@
     console.log('Layout complete.');
 
     // ================================================================
+    // SEARCH INDEX + FUZZY SEARCH
+    // ================================================================
+    const searchIndex = [];
+    // Add languages
+    graphData.nodes.forEach((n, i) => {
+      searchIndex.push({
+        name: n.name,
+        type: 'language',
+        family: n.family,
+        branch: n.branch,
+        nodeIndex: i,
+      });
+    });
+    // Add unique families
+    const seenFamilies = new Set();
+    graphData.nodes.forEach(n => {
+      if (!seenFamilies.has(n.family)) {
+        seenFamilies.add(n.family);
+        searchIndex.push({ name: n.family, type: 'family', family: n.family, branch: null, nodeIndex: -1 });
+      }
+    });
+    // Add unique branches
+    const seenBranches = new Set();
+    graphData.nodes.forEach(n => {
+      if (n.branch && !seenBranches.has(n.branch)) {
+        seenBranches.add(n.branch);
+        searchIndex.push({ name: n.branch, type: 'branch', family: n.family, branch: n.branch, nodeIndex: -1 });
+      }
+    });
+
+    function bigrams(s) {
+      const b = new Set();
+      const lc = s.toLowerCase();
+      for (let i = 0; i < lc.length - 1; i++) b.add(lc.slice(i, i + 2));
+      return b;
+    }
+
+    function diceCoefficient(a, b) {
+      const ba = bigrams(a);
+      const bb = bigrams(b);
+      if (ba.size === 0 && bb.size === 0) return 1;
+      if (ba.size === 0 || bb.size === 0) return 0;
+      let intersection = 0;
+      for (const bg of ba) if (bb.has(bg)) intersection++;
+      return (2 * intersection) / (ba.size + bb.size);
+    }
+
+    function combinedScore(query, target) {
+      const q = query.toLowerCase();
+      const t = target.toLowerCase();
+      if (q === t) return 1.0;
+      if (t.startsWith(q)) return 0.95;
+      // Word boundary match (e.g. "germ" matches "Proto-Germanic" at "Germanic")
+      const words = t.split(/[\s\-_]+/);
+      for (const w of words) {
+        if (w.startsWith(q)) return 0.88;
+      }
+      if (t.includes(q)) return 0.85;
+      return diceCoefficient(q, t);
+    }
+
+    function fuzzySearch(query, maxResults = 10) {
+      if (!query || query.length === 0) return [];
+      const scored = searchIndex.map(entry => ({
+        entry,
+        score: combinedScore(query, entry.name),
+      })).filter(s => s.score > 0.25);
+      // Sort: score desc, then type priority (family > branch > language), then name asc
+      const typePriority = { family: 0, branch: 1, language: 2 };
+      scored.sort((a, b) => {
+        if (Math.abs(b.score - a.score) > 0.001) return b.score - a.score;
+        const tp = (typePriority[a.entry.type] || 2) - (typePriority[b.entry.type] || 2);
+        if (tp !== 0) return tp;
+        return a.entry.name.localeCompare(b.entry.name);
+      });
+      return scored.slice(0, maxResults).map(s => s.entry);
+    }
+
+    // ================================================================
+    // SEARCH PANEL UI
+    // ================================================================
+    const searchPanel = document.getElementById('search-panel');
+    const searchToggle = document.getElementById('search-toggle');
+    const searchClose = document.getElementById('search-close');
+    const searchInput = document.getElementById('search-input');
+    const searchResultsEl = document.getElementById('search-results');
+    const searchClearBtn = document.getElementById('search-clear-btn');
+    const searchSelections = new Map(); // key -> entry
+
+    let searchActive = false;
+    let searchHighlightedNodes = new Set();
+    let searchHighlightedEdges = new Set();
+    let searchCascadeTime = 0;
+    let searchPhase = 'cascade'; // cascade | settle | steady
+    let searchPhaseTime = 0;
+
+    function openSearchPanel() {
+      searchPanel.classList.add('open');
+      searchToggle.style.opacity = '0';
+      searchToggle.style.pointerEvents = 'none';
+      setTimeout(() => searchInput.focus(), 300);
+    }
+
+    function closeSearchPanel() {
+      searchPanel.classList.remove('open');
+      searchToggle.style.opacity = '';
+      searchToggle.style.pointerEvents = '';
+      searchInput.blur();
+    }
+
+    searchToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openSearchPanel();
+    });
+    searchClose.addEventListener('click', () => closeSearchPanel());
+
+    // Prevent graph interaction through panel
+    searchPanel.addEventListener('mousedown', (e) => e.stopPropagation());
+    searchPanel.addEventListener('click', (e) => e.stopPropagation());
+    searchPanel.addEventListener('wheel', (e) => e.stopPropagation());
+    searchPanel.addEventListener('touchstart', (e) => e.stopPropagation());
+    searchPanel.addEventListener('touchmove', (e) => e.stopPropagation());
+
+    // Keyboard shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && searchPanel.classList.contains('open')) {
+        closeSearchPanel();
+        e.preventDefault();
+      }
+      if ((e.key === '/' || (e.key === 'k' && (e.ctrlKey || e.metaKey))) && !searchPanel.classList.contains('open')) {
+        // Don't open if user is typing in some other input
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+        e.preventDefault();
+        openSearchPanel();
+      }
+    });
+
+    // Search input handler
+    searchInput.addEventListener('input', () => {
+      renderSearchResults();
+    });
+
+    searchClearBtn.addEventListener('click', () => {
+      searchSelections.clear();
+      searchInput.value = '';
+      renderSearchResults();
+      renderPresets();
+      applySearchHighlighting();
+    });
+
+    function getNodeIndicesForSelection(sel) {
+      const indices = new Set();
+      if (sel.type === 'family') {
+        const famNodes = familyGroups.get(sel.family);
+        if (famNodes) famNodes.forEach(i => indices.add(i));
+      } else if (sel.type === 'branch') {
+        // Include all nodes whose branch matches or is a sub-branch (separator is ' > ')
+        graphData.nodes.forEach((n, i) => {
+          if (n.branch && (n.branch === sel.branch || n.branch.startsWith(sel.branch + ' > '))) {
+            indices.add(i);
+          }
+        });
+      } else if (sel.type === 'language') {
+        // The node itself + all descendants via BFS through edges (parent->child)
+        indices.add(sel.nodeIndex);
+        const queue = [sel.nodeIndex];
+        const visited = new Set([sel.nodeIndex]);
+        while (queue.length > 0) {
+          const ni = queue.shift();
+          const kids = childrenMap.get(graphData.nodes[ni].id);
+          if (kids) {
+            for (const kidId of kids) {
+              const kidIdx = graphData.nodes.findIndex(n => n.id === kidId);
+              if (kidIdx >= 0 && !visited.has(kidIdx)) {
+                visited.add(kidIdx);
+                indices.add(kidIdx);
+                queue.push(kidIdx);
+              }
+            }
+          }
+        }
+      }
+      return indices;
+    }
+
+    function computeSelectionStats(nodeIndices) {
+      let alive = 0, extinct = 0, moribund = 0, totalSpeakers = 0;
+      const continents = new Set();
+      for (const i of nodeIndices) {
+        const n = graphData.nodes[i];
+        if (n.status === 'alive') alive++;
+        else if (n.status === 'extinct') extinct++;
+        else if (n.status === 'moribund') moribund++;
+        if (n.speakers) totalSpeakers += n.speakers;
+        if (n.continent) continents.add(n.continent);
+      }
+      return { count: nodeIndices.size, alive, extinct, moribund, totalSpeakers, continents: [...continents] };
+    }
+
+    function renderSearchResults() {
+      const query = searchInput.value.trim();
+      let html = '';
+
+      // Selected section
+      if (searchSelections.size > 0) {
+        html += '<div class="search-section-label">Selected</div>';
+        for (const [key, sel] of searchSelections) {
+          const tagClass = sel.type === 'family' ? 'tag-F' : sel.type === 'branch' ? 'tag-B' : 'tag-L';
+          const tagLabel = sel.type === 'family' ? 'F' : sel.type === 'branch' ? 'B' : 'L';
+          const nodeIndices = getNodeIndicesForSelection(sel);
+          const stats = computeSelectionStats(nodeIndices);
+          html += `<div class="search-row selected" data-key="${key}">`;
+          html += `<div class="search-row-check"></div>`;
+          html += `<span class="search-row-name">${sel.name}</span>`;
+          html += `<span class="search-row-tag ${tagClass}">${tagLabel}</span>`;
+          html += `</div>`;
+          // Stats line
+          const parts = [];
+          parts.push(`${stats.count} lang${stats.count !== 1 ? 's' : ''}`);
+          if (stats.alive > 0) parts.push(`${stats.alive} living`);
+          if (stats.extinct > 0) parts.push(`${stats.extinct} extinct`);
+          if (stats.moribund > 0) parts.push(`${stats.moribund} moribund`);
+          if (stats.totalSpeakers > 0) parts.push(formatSpeakers(stats.totalSpeakers) + ' speakers');
+          html += `<div class="search-stats">${parts.join(' / ')}</div>`;
+        }
+      }
+
+      // Search results
+      if (query.length > 0) {
+        const results = fuzzySearch(query);
+        if (results.length > 0) {
+          html += '<div class="search-section-label">Results</div>';
+          for (const entry of results) {
+            const key = `${entry.type}:${entry.name}`;
+            if (searchSelections.has(key)) continue; // already in selected
+            const tagClass = entry.type === 'family' ? 'tag-F' : entry.type === 'branch' ? 'tag-B' : 'tag-L';
+            const tagLabel = entry.type === 'family' ? 'F' : entry.type === 'branch' ? 'B' : 'L';
+            html += `<div class="search-row" data-key="${key}">`;
+            html += `<div class="search-row-check"></div>`;
+            html += `<span class="search-row-name">${entry.name}</span>`;
+            html += `<span class="search-row-tag ${tagClass}">${tagLabel}</span>`;
+            html += `</div>`;
+          }
+        } else {
+          html += '<div class="search-section-label" style="padding-top:20px;text-align:center">No matches</div>';
+        }
+      } else if (searchSelections.size === 0) {
+        html += '<div class="search-section-label" style="padding-top:20px;text-align:center">Type to find families, branches, or languages</div>';
+      }
+
+      searchResultsEl.innerHTML = html;
+
+      // Attach click handlers
+      searchResultsEl.querySelectorAll('.search-row').forEach(row => {
+        row.addEventListener('click', () => handleRowClick(row));
+      });
+    }
+
+    let lastAddedSelectionKey = null; // track what was just added for incremental BFS
+
+    function handleRowClick(row) {
+      const key = row.dataset.key;
+      if (searchSelections.has(key)) {
+        // Deselect
+        searchSelections.delete(key);
+        lastAddedSelectionKey = null;
+      } else {
+        // Select — find the entry in searchIndex
+        const [type, ...nameParts] = key.split(':');
+        const name = nameParts.join(':');
+        const entry = searchIndex.find(e => e.type === type && e.name === name);
+        if (entry) {
+          searchSelections.set(key, entry);
+          lastAddedSelectionKey = key;
+        }
+      }
+      renderSearchResults();
+      renderPresets();
+      applySearchHighlighting();
+    }
+
+    // ================================================================
+    // SEARCH HIGHLIGHT / CASCADE
+    // ================================================================
+    function computeSearchSets() {
+      searchHighlightedNodes = new Set();
+      searchHighlightedEdges = new Set();
+      for (const [, sel] of searchSelections) {
+        const nodeIndices = getNodeIndicesForSelection(sel);
+        for (const ni of nodeIndices) searchHighlightedNodes.add(ni);
+      }
+      // Edges where both endpoints are highlighted
+      graphData.edges.forEach((e, ei) => {
+        if (searchHighlightedNodes.has(e.sourceIdx) && searchHighlightedNodes.has(e.targetIdx)) {
+          searchHighlightedEdges.add(ei);
+        }
+      });
+    }
+
+    function updateSearchDimAttribute() {
+      const dimAttr = edgeGeo.getAttribute('aSearchDim');
+      let vi = 0;
+      for (let ei = 0; ei < graphData.edges.length; ei++) {
+        const dimVal = searchActive && !searchHighlightedEdges.has(ei) ? 1.0 : 0.0;
+        for (let s = 0; s < SEGMENTS_PER_EDGE; s++) {
+          dimAttr.array[vi++] = dimVal;
+          dimAttr.array[vi++] = dimVal;
+        }
+      }
+      dimAttr.needsUpdate = true;
+    }
+
+    // Find a node in the already-lit set that connects to the new selection's nodes
+    function findBridgeNode(newNodeSet) {
+      // Look for edges that connect an already-lit node to a node in newNodeSet
+      for (const ei of searchHighlightedEdges) {
+        const e = graphData.edges[ei];
+        if (newNodeSet.has(e.sourceIdx) && searchHighlightedNodes.has(e.targetIdx) && !newNodeSet.has(e.targetIdx)) {
+          return e.sourceIdx; // start from the new side of the bridge
+        }
+        if (newNodeSet.has(e.targetIdx) && searchHighlightedNodes.has(e.sourceIdx) && !newNodeSet.has(e.sourceIdx)) {
+          return e.targetIdx;
+        }
+      }
+      // Check adjacency: any node in newNodeSet that has an edge to an already-revealed node
+      const ns = graphData.nodes;
+      for (const ni of newNodeSet) {
+        for (const ei of graphData.adjacency[ni]) {
+          const e = graphData.edges[ei];
+          const other = e.sourceIdx === ni ? e.targetIdx : e.sourceIdx;
+          if (searchHighlightedNodes.has(other) && !newNodeSet.has(other) && ns[other].cascadeRevealTime < 9000) {
+            return ni;
+          }
+        }
+      }
+      return null;
+    }
+
+    function triggerSearchCascadeIncremental(addedKey) {
+      const ns = graphData.nodes;
+      const es = graphData.edges;
+      const addedSel = searchSelections.get(addedKey);
+      if (!addedSel) return;
+
+      const newNodeIndices = getNodeIndicesForSelection(addedSel);
+      if (newNodeIndices.size === 0) return;
+
+      // Update the highlighted sets to include the new selection
+      computeSearchSets();
+
+      // Find a bridge node — a node in the new set adjacent to already-lit nodes
+      const bridgeNode = findBridgeNode(newNodeIndices);
+
+      // Only reset reveal times for nodes/edges in the NEW selection
+      for (const ni of newNodeIndices) {
+        ns[ni].cascadeRevealTime = Infinity;
+      }
+      for (let ei = 0; ei < es.length; ei++) {
+        const e = es[ei];
+        if (newNodeIndices.has(e.sourceIdx) && newNodeIndices.has(e.targetIdx)) {
+          e.cascadeRevealTime = Infinity;
+          e.cascadeDirection = 1;
+        }
+      }
+
+      // Pick epicenter: bridge node if found, else centroid of new selection
+      let epicenter;
+      if (bridgeNode !== null) {
+        epicenter = bridgeNode;
+      } else {
+        let cx = 0, cy = 0, cz = 0;
+        for (const ni of newNodeIndices) { cx += ns[ni].position.x; cy += ns[ni].position.y; cz += ns[ni].position.z; }
+        cx /= newNodeIndices.size; cy /= newNodeIndices.size; cz /= newNodeIndices.size;
+        let bestDist = Infinity;
+        epicenter = newNodeIndices.values().next().value;
+        for (const ni of newNodeIndices) {
+          const dx = ns[ni].position.x - cx, dy = ns[ni].position.y - cy, dz = ns[ni].position.z - cz;
+          const d = dx * dx + dy * dy + dz * dz;
+          if (d < bestDist) { bestDist = d; epicenter = ni; }
+        }
+      }
+
+      // Run BFS only for the new nodes, starting from current cascade time
+      runBFS(epicenter, searchCascadeTime, newNodeIndices);
+
+      // Non-selected still at 9999
+      for (const n of ns) if (n.cascadeRevealTime === Infinity) n.cascadeRevealTime = 9999;
+      for (const e of es) if (e.cascadeRevealTime === Infinity) e.cascadeRevealTime = 9999;
+
+      updateEdgeAttributes();
+      // Don't reset searchCascadeTime — let it continue from current time
+      // Brief cascade phase so new nodes animate in; old edges remain fully revealed
+      searchPhase = 'cascade';
+      searchPhaseTime = 0;
+    }
+
+    function triggerSearchCascadeFull() {
+      const ns = graphData.nodes;
+      const es = graphData.edges;
+      // Reset all reveal times
+      for (const n of ns) n.cascadeRevealTime = Infinity;
+      for (const e of es) { e.cascadeRevealTime = Infinity; e.cascadeDirection = 1; }
+
+      // Run BFS for each selection with stagger
+      let staggerOffset = 0;
+      for (const [, sel] of searchSelections) {
+        const nodeIndices = getNodeIndicesForSelection(sel);
+        if (nodeIndices.size === 0) continue;
+
+        const nodeSet = nodeIndices;
+        let cx = 0, cy = 0, cz = 0;
+        for (const ni of nodeSet) { cx += ns[ni].position.x; cy += ns[ni].position.y; cz += ns[ni].position.z; }
+        cx /= nodeSet.size; cy /= nodeSet.size; cz /= nodeSet.size;
+        let bestDist = Infinity, bestIdx = nodeSet.values().next().value;
+        for (const ni of nodeSet) {
+          const dx = ns[ni].position.x - cx, dy = ns[ni].position.y - cy, dz = ns[ni].position.z - cz;
+          const d = dx * dx + dy * dy + dz * dz;
+          if (d < bestDist) { bestDist = d; bestIdx = ni; }
+        }
+        runBFS(bestIdx, staggerOffset, nodeSet);
+        staggerOffset += 0.5;
+      }
+
+      // Non-selected nodes/edges at 9999
+      for (const n of ns) if (n.cascadeRevealTime === Infinity) n.cascadeRevealTime = 9999;
+      for (const e of es) if (e.cascadeRevealTime === Infinity) e.cascadeRevealTime = 9999;
+
+      updateEdgeAttributes();
+      searchCascadeTime = 0;
+      searchPhase = 'cascade';
+      searchPhaseTime = 0;
+    }
+
+    function applySearchHighlighting() {
+      if (searchSelections.size > 0) {
+        const wasActive = searchActive;
+        searchActive = true;
+
+        if (wasActive && lastAddedSelectionKey && searchSelections.has(lastAddedSelectionKey)) {
+          // Incremental add: just grow the new selection from existing lit nodes
+          triggerSearchCascadeIncremental(lastAddedSelectionKey);
+        } else if (wasActive && !lastAddedSelectionKey) {
+          // Deselect: recompute sets and update dims, but don't restart cascade
+          // Nodes that are no longer highlighted get pushed to 9999
+          const prevNodes = new Set(searchHighlightedNodes);
+          computeSearchSets();
+          const ns = graphData.nodes;
+          const es = graphData.edges;
+          for (const ni of prevNodes) {
+            if (!searchHighlightedNodes.has(ni)) ns[ni].cascadeRevealTime = 9999;
+          }
+          for (let ei = 0; ei < es.length; ei++) {
+            const e = es[ei];
+            if (!searchHighlightedEdges.has(ei) && e.cascadeRevealTime < 9000) {
+              e.cascadeRevealTime = 9999;
+            }
+          }
+          updateEdgeAttributes();
+        } else {
+          // First selection: full cascade
+          computeSearchSets();
+          triggerSearchCascadeFull();
+        }
+        updateSearchDimAttribute();
+      } else {
+        searchActive = false;
+        searchHighlightedNodes.clear();
+        searchHighlightedEdges.clear();
+        updateSearchDimAttribute();
+        // Resume normal cycle from steady phase
+        phase = 'steady';
+        phaseTime = 0;
+        cascadeTime = 0;
+        // Reset all to steady state
+        const ns = graphData.nodes;
+        const es = graphData.edges;
+        for (const n of ns) n.cascadeRevealTime = 0;
+        for (const e of es) { e.cascadeRevealTime = 0; e.cascadeDirection = 1; }
+        updateEdgeAttributes();
+      }
+      lastAddedSelectionKey = null;
+    }
+
+    // Initialize search results view
+    renderSearchResults();
+
+    // Preset family suggestions — top 8 by node count
+    const presetFamilies = [...familyGroups.entries()]
+      .sort((a, b) => b[1].length - a[1].length)
+      .slice(0, 8)
+      .map(([name]) => name);
+
+    const searchPresetsEl = document.getElementById('search-presets');
+
+    function renderPresets() {
+      searchPresetsEl.innerHTML = presetFamilies.map(fam => {
+        const key = `family:${fam}`;
+        const isActive = searchSelections.has(key);
+        return `<button class="search-preset${isActive ? ' active' : ''}" data-family="${fam}">${fam}</button>`;
+      }).join('');
+      searchPresetsEl.querySelectorAll('.search-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const fam = btn.dataset.family;
+          const key = `family:${fam}`;
+          if (searchSelections.has(key)) {
+            searchSelections.delete(key);
+            lastAddedSelectionKey = null;
+          } else {
+            const entry = searchIndex.find(e => e.type === 'family' && e.name === fam);
+            if (entry) {
+              searchSelections.set(key, entry);
+              lastAddedSelectionKey = key;
+            }
+          }
+          renderPresets();
+          renderSearchResults();
+          applySearchHighlighting();
+        });
+      });
+    }
+    renderPresets();
+
+    // ================================================================
     // BFS CASCADE
     // ================================================================
     function pickEpicenter() {
@@ -984,6 +1799,7 @@
       attribute float aRevealTime;
       attribute float aDirection;
       attribute vec3 aColor;
+      attribute float aSearchDim;
 
       uniform float uTime;
       uniform float uCascadeTime;
@@ -999,6 +1815,7 @@
       varying float vPhaseOffset;
       varying float vFiberSpeed;
       varying vec3 vEdgeColor;
+      varying float vSearchDim;
 
       void main() {
         vEdgeProgress = aEdgeProgress;
@@ -1007,6 +1824,7 @@
         vSteadyMix = uSteadyMix;
         vGlobalAlpha = uGlobalAlpha;
         vEdgeColor = aColor;
+        vSearchDim = aSearchDim;
 
         // CASCADE GROW
         float cascadeElapsed = uCascadeTime - aRevealTime;
@@ -1040,6 +1858,7 @@
       varying float vSteadyMix;
       varying float vGlobalAlpha;
       varying vec3 vEdgeColor;
+      varying float vSearchDim;
 
       void main() {
         float baseAlpha = 0.24;
@@ -1059,6 +1878,12 @@
 
         float alpha = mix(cascadeWithPulse, steadyAlpha, vSteadyMix) * vGlobalAlpha;
         vec3 color = mix(cascadePulseColor, steadyColor, vSteadyMix);
+
+        // Search dimming: non-highlighted edges become invisible
+        // Kill fiber pulse color too so bloom doesn't pick it up
+        float searchKeep = 1.0 - vSearchDim;
+        alpha *= searchKeep;
+        color *= searchKeep;
 
         if (alpha < 0.001) discard;
         gl_FragColor = vec4(color, alpha);
@@ -1102,6 +1927,8 @@
     edgeGeo.setAttribute('aRevealTime',   new THREE.Float32BufferAttribute(eReveal, 1));
     edgeGeo.setAttribute('aDirection',    new THREE.Float32BufferAttribute(eDir, 1));
     edgeGeo.setAttribute('aColor',        new THREE.Float32BufferAttribute(eCol, 3));
+    const eSearchDim = new Float32Array(graphData.edges.length * SEGMENTS_PER_EDGE * 2);
+    edgeGeo.setAttribute('aSearchDim',   new THREE.Float32BufferAttribute(eSearchDim, 1));
 
     const edgeMat = new THREE.ShaderMaterial({
       vertexShader: edgeVS,
@@ -1794,6 +2621,31 @@
 
       let steadyMix, globalAlpha;
 
+      // Search mode: independent cascade/settle/steady for search-highlighted nodes
+      if (searchActive) {
+        searchCascadeTime += dt;
+        searchPhaseTime += dt;
+        switch (searchPhase) {
+          case 'cascade':
+            cascadeTime = searchCascadeTime;
+            steadyMix = 0;
+            globalAlpha = 1;
+            if (searchPhaseTime >= 7) { searchPhase = 'settle'; searchPhaseTime = 0; }
+            break;
+          case 'settle':
+            cascadeTime = searchCascadeTime;
+            steadyMix = Math.min(1, searchPhaseTime / SETTLE_DUR);
+            steadyMix = steadyMix * steadyMix * (3 - 2 * steadyMix);
+            globalAlpha = 1;
+            if (searchPhaseTime >= SETTLE_DUR) { searchPhase = 'steady'; searchPhaseTime = 0; }
+            break;
+          case 'steady':
+            cascadeTime = searchCascadeTime;
+            steadyMix = 1;
+            globalAlpha = 1;
+            break;
+        }
+      } else {
       // Startup: sequential all-family cascade → settle → steady
       // Then loop: fadeout → dark → single-family cascade → familySettle → steady → ...
       switch (phase) {
@@ -1846,6 +2698,7 @@
           if (phaseTime >= SETTLE_DUR) { phase = 'steady'; phaseTime = 0; }
           break;
       }
+      } // end else (!searchActive)
 
       // Rotation — quaternion-based (no gimbal lock)
       if (!isDragging && !isHoldingNode) {
@@ -1891,6 +2744,23 @@
         const ud = mesh.userData;
 
         let targetOp;
+        const isHighlighted = searchActive && searchHighlightedNodes.has(i);
+        const isDimmedBySearch = searchActive && !searchHighlightedNodes.has(i);
+
+        if (searchActive) {
+          // Search mode: highlighted nodes cascade in, non-highlighted are dim
+          if (isHighlighted) {
+            if (searchPhase === 'cascade' || searchPhase === 'settle') {
+              const tr = searchCascadeTime - node.cascadeRevealTime;
+              const fadeIn = Math.max(0, Math.min(1, tr / NODE_FADE_DUR));
+              targetOp = 0.08 + fadeIn * (0.85 + node.recency * 0.15);
+            } else {
+              targetOp = 0.85 + node.recency * 0.15;
+            }
+          } else {
+            targetOp = 0.04;
+          }
+        } else {
         const isActiveFamily = !cascadeFamily || node.family === cascadeFamily;
         if (phase === 'cascade' || phase === 'settle') {
           if (isActiveFamily) {
@@ -1911,21 +2781,35 @@
         } else {
           targetOp = 0;
         }
+        } // end else (!searchActive)
 
         ud.currentOpacity += (targetOp - ud.currentOpacity) * Math.min(1, dt * 4);
         mesh.material.opacity = ud.currentOpacity;
 
         const pulse = 1 + 0.04 * Math.sin(globalElapsed * 1.2 + i * 0.5);
         let scaleMul = 1;
-        if (phase === 'cascade' && isActiveFamily) {
+        if (searchActive) {
+          // Search mode: highlighted cascade-grow, non-highlighted shrink
+          if (isHighlighted) {
+            if (searchPhase === 'cascade') {
+              const tr = searchCascadeTime - node.cascadeRevealTime;
+              if (tr < 0) scaleMul = 0.3;
+              else if (tr < 0.5) scaleMul = 0.3 + 0.7 * (1 - Math.pow(1 - tr / 0.5, 3));
+            }
+          } else {
+            scaleMul = 0.5;
+          }
+        } else {
+        if (phase === 'cascade' && (!cascadeFamily || node.family === cascadeFamily)) {
           const tr = cascadeTime - node.cascadeRevealTime;
           if (tr < 0) scaleMul = 0.3;
           else if (tr < 0.5) scaleMul = 0.3 + 0.7 * (1 - Math.pow(1 - tr / 0.5, 3));
-        } else if (phase === 'cascade' && !isActiveFamily) {
+        } else if (phase === 'cascade' && cascadeFamily && node.family !== cascadeFamily) {
           scaleMul = 0.7;
         } else if (phase === 'dark') {
           scaleMul = 0.7;
         }
+        } // end else (!searchActive)
         mesh.scale.setScalar(ud.baseSize * pulse * scaleMul);
         mesh.position.copy(node.position);
       }
