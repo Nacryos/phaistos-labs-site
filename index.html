@@ -78,10 +78,10 @@
       50% { opacity: 0; }
     }
 
-    /* Scroll indicator */
+    /* Scroll indicator — sits above the "Learn more" label */
     #scroll-indicator {
       position: absolute;
-      bottom: 40px;
+      bottom: 72px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
@@ -89,7 +89,7 @@
       align-items: center;
       gap: 8px;
       opacity: 0.35;
-      transition: opacity 0.4s;
+      transition: opacity 0.5s ease;
       animation: scrollPulse 2.5s ease-in-out infinite;
     }
     #scroll-indicator span {
@@ -107,8 +107,8 @@
       transform: rotate(45deg);
     }
     @keyframes scrollPulse {
-      0%, 100% { opacity: 0.35; transform: translateX(-50%) translateY(0); }
-      50% { opacity: 0.55; transform: translateX(-50%) translateY(6px); }
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(5px); }
     }
 
     /* Graph shimmer label */
@@ -336,7 +336,7 @@
         display: none;
       }
       #scroll-indicator {
-        bottom: 24px;
+        bottom: 60px;
       }
     }
   </style>
@@ -418,7 +418,13 @@
       heroTitle.style.transform = `scale(${heroScale})`;
       heroSubtitle.style.opacity = heroOpacity * 0.8;
       heroSubtitle.style.transform = `scale(${heroScale * 0.995})`;
-      scrollIndicator.style.opacity = Math.max(0, 0.35 - heroProgress * 1.5);
+      // Scroll indicator: fade out when scrolling toward content, reappear when back at graph
+      const scrolledToContent = scrollY > vh * 0.25;
+      if (scrolledToContent) {
+        scrollIndicator.style.opacity = '0';
+      } else {
+        scrollIndicator.style.opacity = Math.max(0, 0.35 - heroProgress * 1.5);
+      }
       graphLabel.style.opacity = Math.max(0, 1 - heroProgress * 3);
 
       // Content: reveal elements as they enter viewport
@@ -1191,9 +1197,14 @@
     const mouse = new THREE.Vector2(0, 0);
     let isDragging = false;
     let dragStartX = 0, dragStartY = 0;
-    let dragRotY = 0, dragRotX = 0;
-    let dragBaseY = 0, dragBaseX = 0;
+    let lastDragX = 0, lastDragY = 0;
     let isHoldingNode = false; // true when user is holding down on a node (pauses auto-rotation)
+
+    // Quaternion-based rotation (avoids gimbal lock)
+    const orientationQuat = new THREE.Quaternion();
+    const _rotYAxis = new THREE.Vector3(0, 1, 0);
+    const _rotXAxis = new THREE.Vector3(1, 0, 0);
+    const _deltaQuat = new THREE.Quaternion();
 
     const graphEl = renderer.domElement;
 
@@ -1201,8 +1212,14 @@
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
       if (isDragging) {
-        dragRotY = dragBaseY + (e.clientX - dragStartX) * 0.004;
-        dragRotX = dragBaseX + (e.clientY - dragStartY) * 0.004;
+        const dx = e.clientX - lastDragX;
+        const dy = e.clientY - lastDragY;
+        lastDragX = e.clientX;
+        lastDragY = e.clientY;
+        _deltaQuat.setFromAxisAngle(_rotYAxis, dx * 0.004);
+        orientationQuat.premultiply(_deltaQuat);
+        _deltaQuat.setFromAxisAngle(_rotXAxis, dy * 0.004);
+        orientationQuat.premultiply(_deltaQuat);
       }
     });
 
@@ -1210,8 +1227,8 @@
       isDragging = true;
       dragStartX = e.clientX;
       dragStartY = e.clientY;
-      dragBaseY = dragRotY;
-      dragBaseX = dragRotX;
+      lastDragX = e.clientX;
+      lastDragY = e.clientY;
       graphEl.style.cursor = 'grabbing';
       // Check if mousedown is on a node — if so, pause auto-rotation
       doRaycast(e.clientX, e.clientY);
@@ -1296,8 +1313,8 @@
         isTouchRotating = false;
         dragStartX = t.clientX;
         dragStartY = t.clientY;
-        dragBaseY = dragRotY;
-        dragBaseX = dragRotX;
+        lastDragX = t.clientX;
+        lastDragY = t.clientY;
 
         // Hold timer for tooltip (400ms hold without moving)
         touchHoldTimer = setTimeout(() => {
@@ -1343,6 +1360,8 @@
           if (absDx > absDy * 1.2) {
             isTouchRotating = true;
             isDragging = true;
+            lastDragX = t.clientX;
+            lastDragY = t.clientY;
           }
         }
 
@@ -1353,13 +1372,21 @@
           if (!isTouchRotating && touchMoved) {
             isTouchRotating = true;
             isDragging = true;
+            lastDragX = t.clientX;
+            lastDragY = t.clientY;
           }
         }
 
         if (isTouchRotating) {
-          e.preventDefault(); // block scroll, use for rotation
-          dragRotY = dragBaseY + (t.clientX - dragStartX) * 0.004;
-          dragRotX = dragBaseX + (t.clientY - dragStartY) * 0.004;
+          e.preventDefault();
+          const tdx = t.clientX - lastDragX;
+          const tdy = t.clientY - lastDragY;
+          lastDragX = t.clientX;
+          lastDragY = t.clientY;
+          _deltaQuat.setFromAxisAngle(_rotYAxis, tdx * 0.004);
+          orientationQuat.premultiply(_deltaQuat);
+          _deltaQuat.setFromAxisAngle(_rotXAxis, tdy * 0.004);
+          orientationQuat.premultiply(_deltaQuat);
         }
         // At default zoom, vertical-dominant: no preventDefault, page scrolls naturally
       }
@@ -1707,7 +1734,6 @@
     // ================================================================
     const clock = new THREE.Clock();
     const NODE_FADE_DUR = 0.6;
-    let autoRotAngle = 0;
 
     function animate() {
       requestAnimationFrame(animate);
@@ -1770,10 +1796,17 @@
           break;
       }
 
-      // Rotation + zoom — auto-rotation pauses while dragging or holding a node
-      if (!isDragging && !isHoldingNode) autoRotAngle += dt * 0.06;
-      worldGroup.rotation.y = autoRotAngle + dragRotY;
-      worldGroup.rotation.x = dragRotX + (isDragging ? 0 : mouse.y * 0.1 * 0.02);
+      // Rotation — quaternion-based (no gimbal lock)
+      if (!isDragging && !isHoldingNode) {
+        _deltaQuat.setFromAxisAngle(_rotYAxis, dt * 0.06);
+        orientationQuat.premultiply(_deltaQuat);
+      }
+      worldGroup.quaternion.copy(orientationQuat);
+      // Subtle mouse parallax tilt when not dragging
+      if (!isDragging) {
+        _deltaQuat.setFromAxisAngle(_rotXAxis, mouse.y * 0.002);
+        worldGroup.quaternion.multiply(_deltaQuat);
+      }
       camera.position.z += (targetZoom - camera.position.z) * 0.08;
       window._graphZoom.target = targetZoom;
       window._graphZoom.base = BASE_ZOOM;
