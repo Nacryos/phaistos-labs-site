@@ -17,6 +17,7 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       overflow-x: hidden;
+      overscroll-behavior-y: contain;
     }
     canvas { display: block; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 
@@ -330,6 +331,12 @@
         max-width: 320px;
         min-width: 260px;
         font-size: 11.5px;
+      }
+      #graph-label {
+        display: none;
+      }
+      #scroll-indicator {
+        bottom: 24px;
       }
     }
   </style>
@@ -1269,7 +1276,7 @@
 
     renderer.domElement.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
-        e.preventDefault();
+        e.preventDefault(); // prevent pull-to-refresh / browser zoom during pinch
         isTouchPinching = true;
         isTouchRotating = false;
         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -1278,6 +1285,8 @@
         touchStartZoom = targetZoom;
         if (touchHoldTimer) { clearTimeout(touchHoldTimer); touchHoldTimer = null; }
       } else if (e.touches.length === 1) {
+        // When zoomed in, prevent default to block pull-to-refresh on single touch too
+        if (targetZoom < BASE_ZOOM - 10) e.preventDefault();
         const t = e.touches[0];
         touchDragId = t.identifier;
         touchStartX = t.clientX;
@@ -1309,7 +1318,7 @@
           touchHoldTimer = null;
         }, 400);
       }
-    }, { passive: true });
+    }, { passive: false });
 
     renderer.domElement.addEventListener('touchmove', (e) => {
       if (e.touches.length === 2 || isTouchPinching) {
@@ -1337,12 +1346,22 @@
           }
         }
 
+        // When zoomed in, capture ALL single-finger movement for graph rotation
+        // (prevents pull-to-refresh and keeps user in graph-interaction mode)
+        if (targetZoom < BASE_ZOOM - 10) {
+          e.preventDefault();
+          if (!isTouchRotating && touchMoved) {
+            isTouchRotating = true;
+            isDragging = true;
+          }
+        }
+
         if (isTouchRotating) {
           e.preventDefault(); // block scroll, use for rotation
           dragRotY = dragBaseY + (t.clientX - dragStartX) * 0.004;
           dragRotX = dragBaseX + (t.clientY - dragStartY) * 0.004;
         }
-        // Vertical-dominant: no preventDefault, page scrolls naturally
+        // At default zoom, vertical-dominant: no preventDefault, page scrolls naturally
       }
     }, { passive: false });
 
@@ -1758,6 +1777,17 @@
       camera.position.z += (targetZoom - camera.position.z) * 0.08;
       window._graphZoom.target = targetZoom;
       window._graphZoom.base = BASE_ZOOM;
+
+      // Dynamically toggle touch-action and overscroll based on zoom state
+      // When zoomed in: lock touch to canvas (no browser scroll/pull-to-refresh)
+      // When at default zoom: allow vertical pan for page scroll
+      const isZoomedIn = targetZoom < BASE_ZOOM - 10;
+      const canvasTA = renderer.domElement.style.touchAction;
+      if (isZoomedIn && canvasTA !== 'none') {
+        renderer.domElement.style.touchAction = 'none';
+      } else if (!isZoomedIn && canvasTA !== 'pan-y') {
+        renderer.domElement.style.touchAction = 'pan-y';
+      }
 
       // Update nodes
       for (let i = 0; i < NODE_COUNT; i++) {
