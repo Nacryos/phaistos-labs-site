@@ -412,7 +412,7 @@
     const revealEls = document.querySelectorAll('#content-inner h2, #content-inner p, #content-inner .contact');
 
     // Expose zoom state for the scroll handler (set by Three.js module)
-    window._graphZoom = { target: 2800, base: 2800 };
+    window._graphZoom = { target: window.innerWidth <= 768 ? 3400 : 2800, base: window.innerWidth <= 768 ? 3400 : 2800 };
 
     function onScroll() {
       const scrollY = window.scrollY;
@@ -1270,8 +1270,9 @@
     // Prevent text selection on the graph area (fixes long-press text highlight on touch)
     graphEl.addEventListener('selectstart', (e) => e.preventDefault());
 
-    let targetZoom = 2800;
-    const BASE_ZOOM = 2800;
+    const isMobile = window.innerWidth <= 768;
+    const BASE_ZOOM = isMobile ? 3400 : 2800;
+    let targetZoom = BASE_ZOOM;
     const ZOOM_MIN = 150;
     const ZOOM_MAX = 8000;
 
@@ -1313,7 +1314,7 @@
     // TOUCH CONTROLS — pinch zoom, single-finger drag, tap/hold for tooltip
     // ================================================================
     let touchStartDist = 0;
-    let touchStartZoom = 2800;
+    let touchStartZoom = BASE_ZOOM;
     let touchDragId = null;
     let touchStartX = 0, touchStartY = 0;
     let touchHoldTimer = null;
