@@ -6,7 +6,6 @@
   <title>Phaistos Labs</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -446,7 +445,6 @@
       const text = 'Deciphering the world\'s lost languages';
       const el = document.getElementById('typewriter');
       const cursor = document.getElementById('typewriter-cursor');
-      let started = false;
       let i = 0;
       const speed = 25; // ms per character
       function type() {
@@ -455,12 +453,12 @@
           i++;
           setTimeout(type, speed + Math.random() * 30);
         } else {
+          // Hide cursor after a pause
           setTimeout(() => { cursor.style.display = 'none'; }, 1500);
         }
       }
-      // Graph module can trigger this early; otherwise fallback at 800ms
-      window._startTypewriter = function() { if (!started) { started = true; type(); } };
-      setTimeout(window._startTypewriter, 800);
+      // Start after a brief delay for the title to appear
+      setTimeout(type, 800);
     })();
   </script>
   <script src="language_data.js"></script>
@@ -732,7 +730,7 @@
     }
 
     console.log('Running force layout...');
-    for (let i = 0; i < 80; i++) simulateForces();
+    for (let i = 0; i < 120; i++) simulateForces();
     console.log('Layout complete.');
 
     // ================================================================
@@ -1002,7 +1000,7 @@
         float visible = smoothstep(localProg - 0.01, localProg + 0.01, growFrac);
         float tipDist = growFrac - localProg;
         float tip = exp(-tipDist * tipDist * 300.0) * step(0.0, cascadeElapsed);
-        vCascadeAlpha = cascadeElapsed >= 0.0 ? (visible * 0.28 + tip * 0.45) : 0.0;
+        vCascadeAlpha = cascadeElapsed >= 0.0 ? (visible * 0.55 + tip * 0.45) : 0.0;
 
         // FIBER OPTIC — two pulses
         float fiberPos1 = fract(uTime * aFiberSpeed + aPhaseOffset);
@@ -1011,7 +1009,7 @@
         float d1 = min(d1a, 1.0 - d1a);
         float d2a = abs(aEdgeProgress - fiberPos2);
         float d2 = min(d2a, 1.0 - d2a);
-        vFiberAlpha = max(exp(-d1 * d1 * 250.0), exp(-d2 * d2 * 250.0));
+        vFiberAlpha = max(exp(-d1 * d1 * 500.0), exp(-d2 * d2 * 500.0));
 
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
@@ -1037,14 +1035,8 @@
 
         vec3 cascadeColor = vec3(0.95, 0.88, 0.8);
 
-        // Fiber optic pulses on revealed cascade edges
-        float revealFrac = smoothstep(0.1, 0.5, vCascadeAlpha);
-        float fiberOnCascade = vFiberAlpha * 1.4 * revealFrac;
-        float cascadeWithPulse = vCascadeAlpha + fiberOnCascade;
-        vec3 cascadePulseColor = mix(cascadeColor, vec3(1.0, 0.98, 0.92), vFiberAlpha * revealFrac * 0.95);
-
-        float alpha = mix(cascadeWithPulse, steadyAlpha, vSteadyMix) * vGlobalAlpha;
-        vec3 color = mix(cascadePulseColor, steadyColor, vSteadyMix);
+        float alpha = mix(vCascadeAlpha, steadyAlpha, vSteadyMix) * vGlobalAlpha;
+        vec3 color = mix(cascadeColor, steadyColor, vSteadyMix);
 
         if (alpha < 0.001) discard;
         gl_FragColor = vec4(color, alpha);
@@ -1224,11 +1216,9 @@
         const dy = e.clientY - lastDragY;
         lastDragX = e.clientX;
         lastDragY = e.clientY;
-        // Scale rotation sensitivity with zoom — slower when zoomed in for precision
-        const rotScale = 0.004 * Math.max(0.25, camera.position.z / BASE_ZOOM);
-        _deltaQuat.setFromAxisAngle(_rotYAxis, dx * rotScale);
+        _deltaQuat.setFromAxisAngle(_rotYAxis, dx * 0.004);
         orientationQuat.premultiply(_deltaQuat);
-        _deltaQuat.setFromAxisAngle(_rotXAxis, dy * rotScale);
+        _deltaQuat.setFromAxisAngle(_rotXAxis, dy * 0.004);
         orientationQuat.premultiply(_deltaQuat);
       }
     });
@@ -1258,12 +1248,8 @@
 
     let targetZoom = 2800;
     const BASE_ZOOM = 2800;
-    const ZOOM_MIN = 150;
+    const ZOOM_MIN = 400;
     const ZOOM_MAX = 8000;
-
-    // Directional zoom: camera offsets toward the zoom focus point
-    let targetCamX = 0, targetCamY = 0;
-    const zoomFocus = new THREE.Vector2(0, 0); // NDC of zoom target (-1 to 1)
 
     // Wheel: zoom graph when in hero view; bridge zoom-out to page scroll only at default zoom
     window.addEventListener('wheel', (e) => {
@@ -1273,8 +1259,6 @@
       // If graph is zoomed in at all (below base), capture ALL wheel for graph zoom
       if (targetZoom < BASE_ZOOM - 10) {
         e.preventDefault();
-        // Update zoom focus when zooming in further
-        if (e.deltaY < 0) { zoomFocus.set(mouse.x, mouse.y); }
         targetZoom += e.deltaY * 2;
         targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, targetZoom));
         // Clamp so it doesn't overshoot past base when zooming out
@@ -1286,7 +1270,6 @@
       if (e.deltaY < 0) {
         // Scrolling up / zooming in — zoom the graph
         e.preventDefault();
-        zoomFocus.set(mouse.x, mouse.y); // capture zoom direction
         targetZoom += e.deltaY * 2;
         targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, targetZoom));
       } else {
@@ -1363,14 +1346,7 @@
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const dist = Math.sqrt(dx * dx + dy * dy);
         const scale = touchStartDist / dist;
-        const prevZoom = targetZoom;
         targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, touchStartZoom * scale));
-        // Update zoom focus to pinch center when zooming in
-        if (targetZoom < prevZoom) {
-          const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-          const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-          zoomFocus.set((cx / window.innerWidth) * 2 - 1, -(cy / window.innerHeight) * 2 + 1);
-        }
       } else if (e.touches.length === 1) {
         const t = e.touches[0];
         const dx = t.clientX - touchStartX;
@@ -1407,10 +1383,9 @@
           const tdy = t.clientY - lastDragY;
           lastDragX = t.clientX;
           lastDragY = t.clientY;
-          const tRotScale = 0.004 * Math.max(0.25, camera.position.z / BASE_ZOOM);
-          _deltaQuat.setFromAxisAngle(_rotYAxis, tdx * tRotScale);
+          _deltaQuat.setFromAxisAngle(_rotYAxis, tdx * 0.004);
           orientationQuat.premultiply(_deltaQuat);
-          _deltaQuat.setFromAxisAngle(_rotXAxis, tdy * tRotScale);
+          _deltaQuat.setFromAxisAngle(_rotXAxis, tdy * 0.004);
           orientationQuat.premultiply(_deltaQuat);
         }
         // At default zoom, vertical-dominant: no preventDefault, page scrolls naturally
@@ -1836,17 +1811,6 @@
       window._graphZoom.target = targetZoom;
       window._graphZoom.base = BASE_ZOOM;
 
-      // Directional zoom: shift camera X/Y toward zoom focus when zoomed in
-      const zoomDepth = Math.max(0, (BASE_ZOOM - targetZoom) / (BASE_ZOOM - ZOOM_MIN));
-      const maxShift = 550 * zoomDepth; // approximate graph radius
-      targetCamX = zoomFocus.x * maxShift;
-      targetCamY = zoomFocus.y * maxShift;
-      // Smooth lerp — slightly slower than zoom for a flowing feel
-      camera.position.x += (targetCamX - camera.position.x) * 0.06;
-      camera.position.y += (targetCamY - camera.position.y) * 0.06;
-      // Always look at the graph center — keeps rotation pivot on screen
-      camera.lookAt(0, 0, 0);
-
       // Dynamically toggle touch-action and overscroll based on zoom state
       // When zoomed in: lock touch to canvas (no browser scroll/pull-to-refresh)
       // When at default zoom: allow vertical pan for page scroll
@@ -1941,9 +1905,6 @@
     }
 
     animate();
-
-    // Graph is ready — start the typewriter subtitle in sync
-    if (window._startTypewriter) window._startTypewriter();
 
     // ================================================================
     // RESIZE
