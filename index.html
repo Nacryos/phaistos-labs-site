@@ -600,13 +600,13 @@
 
     // Cascade cycle timing
     const CASCADE_DUR = 10;
-    const SETTLE_DUR = 3;
-    const STEADY_DUR = 30;
-    const FADEOUT_DUR = 2.5;
-    const DARK_DUR = 0.6;
-    const WAVE_INTERVAL = 0.15;
-    const INTRA_WAVE_DELAY = 0.005;
-    const EDGE_GROW_DUR = 0.5;
+    const SETTLE_DUR = 1.5;
+    const STEADY_DUR = 12;
+    const FADEOUT_DUR = 1.5;
+    const DARK_DUR = 0.3;
+    const WAVE_INTERVAL = 0.3;
+    const INTRA_WAVE_DELAY = 0.008;
+    const EDGE_GROW_DUR = 0.8;
 
     // ================================================================
     // FORCE-DIRECTED LAYOUT (pre-compute)
@@ -1729,7 +1729,7 @@
             if (phaseTime >= startupCascadeDuration) { phase = 'settle'; phaseTime = 0; }
           } else {
             // Single-family cascade — 5s burst then settle back to full colorful state
-            if (phaseTime >= 5) { phase = 'familySettle'; phaseTime = 0; }
+            if (phaseTime >= 7) { phase = 'familySettle'; phaseTime = 0; }
           }
           break;
         case 'settle':
