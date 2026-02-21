@@ -308,6 +308,62 @@
       color: rgba(255,255,255,0.2);
       letter-spacing: 1px;
     }
+    /* Leader-line labels */
+    #leader-labels {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 90;
+      overflow: hidden;
+    }
+    .leader-label {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+    }
+    .leader-svg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .leader-svg polyline {
+      fill: none;
+      stroke: rgba(255,255,255,0.7);
+      stroke-width: 1;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .leader-text {
+      position: fixed;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255,255,255,0.85);
+      white-space: nowrap;
+      pointer-events: none;
+      text-shadow: 0 0 8px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.6);
+    }
+    @media (max-width: 768px) {
+      .leader-text {
+        font-size: 8px;
+        letter-spacing: 0.8px;
+      }
+      .leader-svg polyline {
+        stroke-width: 0.75;
+        stroke: rgba(255,255,255,0.6);
+      }
+      #leader-labels {
+        /* hide labels entirely when search panel is open on mobile (it's full-width) */
+      }
+    }
+
     /* Search toggle button */
     #search-toggle {
       position: fixed;
@@ -671,6 +727,7 @@
   </div>
 
   <div id="tooltip"></div>
+  <div id="leader-labels"></div>
 
   <button id="search-toggle" title="Search languages (Ctrl+K)">
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
@@ -1135,8 +1192,6 @@
     let searchHighlightedNodes = new Set();
     let searchHighlightedEdges = new Set();
     let searchCascadeTime = 0;
-    let searchPhase = 'cascade'; // cascade | settle | steady
-    let searchPhaseTime = 0;
 
     function openSearchPanel() {
       searchPanel.classList.add('open');
@@ -1389,19 +1444,25 @@
       const newNodeIndices = getNodeIndicesForSelection(addedSel);
       if (newNodeIndices.size === 0) return;
 
+      // Snapshot which nodes/edges are already lit BEFORE updating
+      const previouslyLitNodes = new Set(searchHighlightedNodes);
+      const previouslyLitEdges = new Set(searchHighlightedEdges);
+
       // Update the highlighted sets to include the new selection
       computeSearchSets();
 
       // Find a bridge node — a node in the new set adjacent to already-lit nodes
       const bridgeNode = findBridgeNode(newNodeIndices);
 
-      // Only reset reveal times for nodes/edges in the NEW selection
+      // Only reset reveal times for NEW (not previously-lit) nodes/edges
       for (const ni of newNodeIndices) {
-        ns[ni].cascadeRevealTime = Infinity;
+        if (!previouslyLitNodes.has(ni)) {
+          ns[ni].cascadeRevealTime = Infinity;
+        }
       }
       for (let ei = 0; ei < es.length; ei++) {
         const e = es[ei];
-        if (newNodeIndices.has(e.sourceIdx) && newNodeIndices.has(e.targetIdx)) {
+        if (!previouslyLitEdges.has(ei) && newNodeIndices.has(e.sourceIdx) && newNodeIndices.has(e.targetIdx)) {
           e.cascadeRevealTime = Infinity;
           e.cascadeDirection = 1;
         }
@@ -1424,7 +1485,8 @@
         }
       }
 
-      // Run BFS only for the new nodes, starting from current cascade time
+      // Run BFS for new nodes only, starting from current cascade time
+      // Previous selections' reveal times are untouched — they continue at their own pace
       runBFS(epicenter, searchCascadeTime, newNodeIndices);
 
       // Non-selected still at 9999
@@ -1432,10 +1494,6 @@
       for (const e of es) if (e.cascadeRevealTime === Infinity) e.cascadeRevealTime = 9999;
 
       updateEdgeAttributes();
-      // Don't reset searchCascadeTime — let it continue from current time
-      // Brief cascade phase so new nodes animate in; old edges remain fully revealed
-      searchPhase = 'cascade';
-      searchPhaseTime = 0;
     }
 
     function triggerSearchCascadeFull() {
@@ -1471,8 +1529,6 @@
 
       updateEdgeAttributes();
       searchCascadeTime = 0;
-      searchPhase = 'cascade';
-      searchPhaseTime = 0;
     }
 
     function applySearchHighlighting() {
@@ -1523,6 +1579,299 @@
         updateEdgeAttributes();
       }
       lastAddedSelectionKey = null;
+      syncLeaderLabels();
+    }
+
+    // ================================================================
+    // LEADER-LINE LABELS
+    // ================================================================
+    const leaderLabels = new Map();       // selectionKey → label state
+    const labelVisibility = new Map();    // selectionKey → boolean (user toggle)
+    const leaderContainer = document.getElementById('leader-labels');
+    const LABEL_ANIM_DUR = 0.4;
+    const _projTmp = new THREE.Vector3();
+
+    // Project all visible branch nodes to screen. Compute:
+    //   - visible COM (center of mass of what the user can see)
+    //   - radial direction outward from the projected GLOBE CENTER
+    //     (geometrically correct at every zoom — the sphere center
+    //      defines "outward" regardless of where it sits on screen)
+    //   - visible radius along the radial (how far nodes extend)
+    // The label line starts at the visible COM, extends radially
+    // past the outermost visible node, then turns horizontal.
+    function getSelectionScreenInfo(labelState) {
+      const indices = labelState.nodeIndices;
+      const W = window.innerWidth, H = window.innerHeight;
+
+      // Project globe center (world origin through worldGroup transform)
+      _projTmp.set(0, 0, 0);
+      worldGroup.localToWorld(_projTmp);
+      _projTmp.project(camera);
+      const gcx = (_projTmp.x * 0.5 + 0.5) * W;
+      const gcy = (-_projTmp.y * 0.5 + 0.5) * H;
+
+      // Viewport bounds with padding (prevents pop-in during rotation)
+      const vPad = 100;
+      const vL = -vPad, vT = -vPad, vR = W + vPad, vB = H + vPad;
+
+      // Project & filter to visible nodes
+      const visible = [];
+      for (const ni of indices) {
+        nodeMeshes[ni].getWorldPosition(_projTmp);
+        _projTmp.project(camera);
+        if (_projTmp.z > 1) continue;
+        const sx = (_projTmp.x * 0.5 + 0.5) * W;
+        const sy = (-_projTmp.y * 0.5 + 0.5) * H;
+        if (sx < vL || sx > vR || sy < vT || sy > vB) continue;
+        visible.push({ sx, sy });
+      }
+      if (visible.length === 0) return null;
+
+      // Visible center of mass
+      let cx = 0, cy = 0;
+      for (const p of visible) { cx += p.sx; cy += p.sy; }
+      cx /= visible.length;
+      cy /= visible.length;
+
+      // Radial direction: globe center → visible COM (always outward from sphere)
+      let rx = cx - gcx, ry = cy - gcy;
+      const rLen = Math.hypot(rx, ry);
+      if (rLen > 1) { rx /= rLen; ry /= rLen; }
+      else { rx = 0; ry = -1; }
+
+      // How far the visible cluster extends along the radial from its COM
+      let maxRadial = 0;
+      for (const p of visible) {
+        const d = (p.sx - cx) * rx + (p.sy - cy) * ry;
+        if (d > maxRadial) maxRadial = d;
+      }
+
+      return { cx, cy, rx, ry, visibleRadius: maxRadial };
+    }
+
+    function computeLabelGeometry(info, name) {
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      const panelOpen = searchPanel.classList.contains('open');
+      const isMobile = W <= 768;
+      const panelW = (panelOpen && !isMobile) ? 340 : 0;
+      const margin = isMobile ? 16 : 30;
+
+      const { cx: anchorX, cy: anchorY, rx, ry, visibleRadius } = info;
+
+      // Elbow sits just past the outermost visible node along the radial.
+      // The diagonal adapts to the branch's visual size on screen.
+      const pad = isMobile ? 15 : 25;
+      const maxDiag = isMobile ? 120 : 200; // cap for very large families
+      const elbowDist = Math.min(visibleRadius + pad, maxDiag);
+      let elbowX = anchorX + rx * elbowDist;
+      let elbowY = anchorY + ry * elbowDist;
+
+      // Horizontal direction follows the radial's x component
+      let dirX = rx >= 0 ? 1 : -1;
+
+      // Text measurement
+      const charW = isMobile ? 5 : 6.5;
+      const textW = name.length * charW + 12;
+      const horizLen = Math.max(isMobile ? 55 : 100, textW);
+
+      let hx = elbowX + dirX * horizLen;
+
+      // --- Boundary clamping ---
+      const leftBound   = panelW + margin;
+      const rightBound  = W - margin;
+      const topBound    = margin;
+      const bottomBound = H - margin;
+
+      // If horizontal end goes off screen, flip dirX
+      if (hx < leftBound || hx > rightBound) {
+        dirX = -dirX;
+        hx = elbowX + dirX * horizLen;
+      }
+
+      // Clamp elbow into viewport
+      elbowX = Math.max(leftBound, Math.min(rightBound, elbowX));
+      elbowY = Math.max(topBound, Math.min(bottomBound, elbowY));
+      hx = Math.max(leftBound, Math.min(rightBound, hx));
+
+      // If squeezed, try one more flip
+      if (Math.abs(hx - elbowX) < 30) {
+        dirX = -dirX;
+        hx = elbowX + dirX * horizLen;
+        hx = Math.max(leftBound, Math.min(rightBound, hx));
+      }
+
+      const points = `${anchorX},${anchorY} ${elbowX},${elbowY} ${hx},${elbowY}`;
+      const seg1 = Math.hypot(elbowX - anchorX, elbowY - anchorY);
+      const seg2 = Math.abs(hx - elbowX);
+      const totalLength = seg1 + seg2;
+
+      // Text clearly above the horizontal line
+      const textX = Math.min(elbowX, hx) + 3;
+      const textY = elbowY - (isMobile ? 12 : 15);
+
+      return { points, totalLength, textX, textY, elbowY };
+    }
+
+    function createLeaderLabel(key, name, nodeIndices) {
+      if (leaderLabels.has(key)) return;
+
+      const container = document.createElement('div');
+      container.className = 'leader-label';
+
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'leader-svg');
+      svg.style.position = 'fixed';
+      svg.style.top = '0';
+      svg.style.left = '0';
+      svg.style.width = '100%';
+      svg.style.height = '100%';
+
+      const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      svg.appendChild(polyline);
+
+      const textEl = document.createElement('div');
+      textEl.className = 'leader-text';
+      textEl.textContent = name;
+
+      container.appendChild(svg);
+      container.appendChild(textEl);
+      leaderContainer.appendChild(container);
+
+      const state = {
+        key, name, nodeIndices: new Set(nodeIndices),
+        phase: 'expanding', animT: 0,
+        svgEl: svg, polylineEl: polyline, textEl, containerEl: container,
+        totalLength: 0
+      };
+      leaderLabels.set(key, state);
+      labelVisibility.set(key, true);
+    }
+
+    function removeLeaderLabel(key) {
+      const state = leaderLabels.get(key);
+      if (!state) return;
+      if (state.phase === 'collapsing') return;
+      state.phase = 'collapsing';
+      state.animT = 1;
+    }
+
+    function destroyLeaderLabel(key) {
+      const state = leaderLabels.get(key);
+      if (!state) return;
+      state.containerEl.remove();
+      leaderLabels.delete(key);
+    }
+
+    function toggleLeaderLabel(key, name, nodeIndices) {
+      const state = leaderLabels.get(key);
+      if (state && (state.phase === 'visible' || state.phase === 'expanding')) {
+        removeLeaderLabel(key);
+        labelVisibility.set(key, false);
+      } else if (!state || state.phase === 'collapsing') {
+        if (state) destroyLeaderLabel(key); // destroy collapsing one to recreate
+        createLeaderLabel(key, name, nodeIndices);
+        labelVisibility.set(key, true);
+      }
+    }
+
+    function syncLeaderLabels() {
+      // Auto-show for language selections
+      const activeKeys = new Set();
+      for (const [key, sel] of searchSelections) {
+        activeKeys.add(key);
+        if (sel.type === 'language') {
+          // Auto-show label for language selections
+          if (!leaderLabels.has(key) && labelVisibility.get(key) !== false) {
+            const nodeIndices = getNodeIndicesForSelection(sel);
+            createLeaderLabel(key, sel.name, nodeIndices);
+          }
+        }
+        // Family/branch: don't auto-show (they toggle on click)
+      }
+
+      // Collapse labels whose selection was removed
+      for (const [key, state] of leaderLabels) {
+        if (!activeKeys.has(key) && state.phase !== 'collapsing') {
+          removeLeaderLabel(key);
+        }
+      }
+
+      // If search is entirely cleared, collapse all and clear visibility
+      if (searchSelections.size === 0) {
+        for (const [key] of leaderLabels) {
+          removeLeaderLabel(key);
+        }
+        labelVisibility.clear();
+      }
+    }
+
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function updateLeaderLabels(dt) {
+      if (leaderLabels.size === 0) return;
+
+      // Pass 1: advance animation + project visible nodes
+      const candidates = [];
+      for (const [key, state] of leaderLabels) {
+        if (state.phase === 'expanding') {
+          state.animT += dt / LABEL_ANIM_DUR;
+          if (state.animT >= 1) { state.animT = 1; state.phase = 'visible'; }
+        } else if (state.phase === 'collapsing') {
+          state.animT -= dt / LABEL_ANIM_DUR;
+          if (state.animT <= 0) { destroyLeaderLabel(key); continue; }
+        }
+
+        const info = getSelectionScreenInfo(state);
+        if (!info) {
+          state.containerEl.style.display = 'none';
+          continue;
+        }
+        state.containerEl.style.display = '';
+        candidates.push({ state, info });
+      }
+
+      // Pass 2: compute geometry (radial direction is baked into info)
+      const labelPositions = [];
+      for (const { state, info } of candidates) {
+        const geo = computeLabelGeometry(info, state.name);
+        state.totalLength = geo.totalLength;
+        labelPositions.push({ state, geo, textY: geo.textY, textX: geo.textX });
+      }
+
+      // Pass 3: overlap avoidance — nudge labels too close vertically
+      labelPositions.sort((a, b) => a.textY - b.textY);
+      const minGap = 20;
+      for (let i = 1; i < labelPositions.length; i++) {
+        const prev = labelPositions[i - 1];
+        const curr = labelPositions[i];
+        if (Math.abs(curr.textX - prev.textX) < 160) {
+          const gap = curr.textY - prev.textY;
+          if (gap < minGap) {
+            const nudge = (minGap - gap) / 2;
+            prev.textY -= nudge;
+            prev.geo.textY -= nudge;
+            curr.textY += nudge;
+            curr.geo.textY += nudge;
+          }
+        }
+      }
+
+      // Pass 4: apply to DOM
+      for (const { state, geo } of labelPositions) {
+        const easedT = easeOutCubic(state.animT);
+
+        state.polylineEl.setAttribute('points', geo.points);
+        state.polylineEl.setAttribute('stroke-dasharray', geo.totalLength);
+        state.polylineEl.setAttribute('stroke-dashoffset', geo.totalLength - geo.totalLength * easedT);
+
+        state.textEl.style.left = geo.textX + 'px';
+        state.textEl.style.top = geo.textY + 'px';
+        const textOpacity = Math.max(0, Math.min(1, (state.animT - 0.6) / 0.4));
+        state.textEl.style.opacity = textOpacity;
+      }
     }
 
     // Initialize search results view
@@ -1806,6 +2155,7 @@
       uniform float uGrowDuration;
       uniform float uSteadyMix;
       uniform float uGlobalAlpha;
+      uniform float uSearchMode;
 
       varying float vEdgeProgress;
       varying float vFiberAlpha;
@@ -1821,7 +2171,6 @@
         vEdgeProgress = aEdgeProgress;
         vPhaseOffset = aPhaseOffset;
         vFiberSpeed = aFiberSpeed;
-        vSteadyMix = uSteadyMix;
         vGlobalAlpha = uGlobalAlpha;
         vEdgeColor = aColor;
         vSearchDim = aSearchDim;
@@ -1835,6 +2184,16 @@
         float tipDist = growFrac - localProg;
         float tip = exp(-tipDist * tipDist * 300.0) * step(0.0, cascadeElapsed);
         vCascadeAlpha = cascadeElapsed >= 0.0 ? (visible * 0.28 + tip * 0.45) : 0.0;
+
+        // Per-edge steady mix: in search mode, each edge independently transitions
+        // from cascade glow to fiber-optic steady based on its own age
+        if (uSearchMode > 0.5 && aRevealTime < 9000.0 && cascadeElapsed > 0.0) {
+          float perEdgeSteady = clamp((cascadeElapsed - 5.0) / 1.5, 0.0, 1.0);
+          perEdgeSteady = perEdgeSteady * perEdgeSteady * (3.0 - 2.0 * perEdgeSteady);
+          vSteadyMix = max(uSteadyMix, perEdgeSteady);
+        } else {
+          vSteadyMix = uSteadyMix;
+        }
 
         // FIBER OPTIC — two pulses
         float fiberPos1 = fract(uTime * aFiberSpeed + aPhaseOffset);
@@ -1929,7 +2288,6 @@
     edgeGeo.setAttribute('aColor',        new THREE.Float32BufferAttribute(eCol, 3));
     const eSearchDim = new Float32Array(graphData.edges.length * SEGMENTS_PER_EDGE * 2);
     edgeGeo.setAttribute('aSearchDim',   new THREE.Float32BufferAttribute(eSearchDim, 1));
-
     const edgeMat = new THREE.ShaderMaterial({
       vertexShader: edgeVS,
       fragmentShader: edgeFS,
@@ -1942,6 +2300,7 @@
         uGrowDuration: { value: EDGE_GROW_DUR },
         uSteadyMix:    { value: 0 },
         uGlobalAlpha:  { value: 1 },
+        uSearchMode:   { value: 0 },
       },
     });
 
@@ -2577,7 +2936,68 @@
       }
     }
 
-    // Click to pin/unpin tooltip
+    // --- Leader-label click helpers ---
+    function pointToSegmentDist(px, py, ax, ay, bx, by) {
+      const abx = bx - ax, aby = by - ay;
+      const apx = px - ax, apy = py - ay;
+      const t = Math.max(0, Math.min(1, (apx * abx + apy * aby) / (abx * abx + aby * aby + 1e-12)));
+      const cx = ax + t * abx, cy = ay + t * aby;
+      return Math.hypot(px - cx, py - cy);
+    }
+
+    function findNearestEdge(mx, my, maxDist) {
+      if (!maxDist) maxDist = 12;
+      let bestDist = maxDist + 1, bestIdx = -1;
+      const tmpA = new THREE.Vector3();
+      const tmpB = new THREE.Vector3();
+      for (const ei of searchHighlightedEdges) {
+        const edge = graphData.edges[ei];
+        nodeMeshes[edge.sourceIdx].getWorldPosition(tmpA);
+        tmpA.project(camera);
+        const sx1 = (tmpA.x * 0.5 + 0.5) * window.innerWidth;
+        const sy1 = (-tmpA.y * 0.5 + 0.5) * window.innerHeight;
+        nodeMeshes[edge.targetIdx].getWorldPosition(tmpB);
+        tmpB.project(camera);
+        const sx2 = (tmpB.x * 0.5 + 0.5) * window.innerWidth;
+        const sy2 = (-tmpB.y * 0.5 + 0.5) * window.innerHeight;
+        const d = pointToSegmentDist(mx, my, sx1, sy1, sx2, sy2);
+        if (d < bestDist) { bestDist = d; bestIdx = ei; }
+      }
+      return bestIdx >= 0 ? bestIdx : null;
+    }
+
+    function findSelectionForNode(nodeIdx) {
+      // Prefer family/branch over language
+      let langKey = null;
+      for (const [key, sel] of searchSelections) {
+        const indices = getNodeIndicesForSelection(sel);
+        if (indices.has(nodeIdx)) {
+          if (sel.type === 'family' || sel.type === 'branch') return { key, sel, indices };
+          if (!langKey) langKey = { key, sel, indices };
+        }
+      }
+      return langKey || null;
+    }
+
+    function findSelectionForEdge(edgeIdx) {
+      const edge = graphData.edges[edgeIdx];
+      for (const [key, sel] of searchSelections) {
+        const indices = getNodeIndicesForSelection(sel);
+        if (indices.has(edge.sourceIdx) && indices.has(edge.targetIdx)) {
+          if (sel.type === 'family' || sel.type === 'branch') return { key, sel, indices };
+        }
+      }
+      // Fallback: any selection containing both
+      for (const [key, sel] of searchSelections) {
+        const indices = getNodeIndicesForSelection(sel);
+        if (indices.has(edge.sourceIdx) && indices.has(edge.targetIdx)) {
+          return { key, sel, indices };
+        }
+      }
+      return null;
+    }
+
+    // Click to pin/unpin tooltip + leader-label toggle
     window.addEventListener('click', (e) => {
       // Ignore if drag was significant
       const dx = e.clientX - dragStartX;
@@ -2585,19 +3005,37 @@
       if (Math.abs(dx) + Math.abs(dy) > 6) return;
 
       if (hoveredMesh) {
+        // In search mode: toggle leader label for the selection owning this node
+        if (searchActive) {
+          const nodeIdx = hoveredMesh.userData.nodeIndex;
+          const found = findSelectionForNode(nodeIdx);
+          if (found) {
+            toggleLeaderLabel(found.key, found.sel.name, found.indices);
+          }
+        }
+        // Normal tooltip pin/unpin still applies
         if (pinnedMesh === hoveredMesh) {
-          // Unpin
           pinnedMesh = null;
           unhighlightNode();
           hideTooltip();
         } else {
-          // Pin new
           pinnedMesh = hoveredMesh;
           const d = hoveredMesh.userData.langData;
           highlightNode(hoveredMesh);
           showTooltip(d, e.clientX, e.clientY, true);
         }
       } else {
+        // No node hit — check for edge click in search mode
+        if (searchActive) {
+          const edgeIdx = findNearestEdge(e.clientX, e.clientY);
+          if (edgeIdx !== null) {
+            const found = findSelectionForEdge(edgeIdx);
+            if (found) {
+              toggleLeaderLabel(found.key, found.sel.name, found.indices);
+              return; // Don't unpin tooltip on edge click
+            }
+          }
+        }
         // Click empty space — unpin
         if (pinnedMesh) {
           pinnedMesh = null;
@@ -2621,30 +3059,12 @@
 
       let steadyMix, globalAlpha;
 
-      // Search mode: independent cascade/settle/steady for search-highlighted nodes
+      // Search mode: per-edge independent cascade → steady transitions (shader-driven)
       if (searchActive) {
         searchCascadeTime += dt;
-        searchPhaseTime += dt;
-        switch (searchPhase) {
-          case 'cascade':
-            cascadeTime = searchCascadeTime;
-            steadyMix = 0;
-            globalAlpha = 1;
-            if (searchPhaseTime >= 7) { searchPhase = 'settle'; searchPhaseTime = 0; }
-            break;
-          case 'settle':
-            cascadeTime = searchCascadeTime;
-            steadyMix = Math.min(1, searchPhaseTime / SETTLE_DUR);
-            steadyMix = steadyMix * steadyMix * (3 - 2 * steadyMix);
-            globalAlpha = 1;
-            if (searchPhaseTime >= SETTLE_DUR) { searchPhase = 'steady'; searchPhaseTime = 0; }
-            break;
-          case 'steady':
-            cascadeTime = searchCascadeTime;
-            steadyMix = 1;
-            globalAlpha = 1;
-            break;
-        }
+        cascadeTime = searchCascadeTime;
+        steadyMix = 0;   // shader computes per-edge steady via uSearchMode
+        globalAlpha = 1;
       } else {
       // Startup: sequential all-family cascade → settle → steady
       // Then loop: fadeout → dark → single-family cascade → familySettle → steady → ...
@@ -2748,14 +3168,14 @@
         const isDimmedBySearch = searchActive && !searchHighlightedNodes.has(i);
 
         if (searchActive) {
-          // Search mode: highlighted nodes cascade in, non-highlighted are dim
+          // Search mode: each node independently fades in based on its own reveal time
           if (isHighlighted) {
-            if (searchPhase === 'cascade' || searchPhase === 'settle') {
-              const tr = searchCascadeTime - node.cascadeRevealTime;
-              const fadeIn = Math.max(0, Math.min(1, tr / NODE_FADE_DUR));
-              targetOp = 0.08 + fadeIn * (0.85 + node.recency * 0.15);
+            const tr = searchCascadeTime - node.cascadeRevealTime;
+            if (tr <= 0) {
+              targetOp = 0.08;
             } else {
-              targetOp = 0.85 + node.recency * 0.15;
+              const fadeIn = Math.min(1, tr / NODE_FADE_DUR);
+              targetOp = 0.08 + fadeIn * (0.85 + node.recency * 0.15);
             }
           } else {
             targetOp = 0.04;
@@ -2789,13 +3209,12 @@
         const pulse = 1 + 0.04 * Math.sin(globalElapsed * 1.2 + i * 0.5);
         let scaleMul = 1;
         if (searchActive) {
-          // Search mode: highlighted cascade-grow, non-highlighted shrink
+          // Search mode: each node independently cascade-grows based on its own reveal time
           if (isHighlighted) {
-            if (searchPhase === 'cascade') {
-              const tr = searchCascadeTime - node.cascadeRevealTime;
-              if (tr < 0) scaleMul = 0.3;
-              else if (tr < 0.5) scaleMul = 0.3 + 0.7 * (1 - Math.pow(1 - tr / 0.5, 3));
-            }
+            const tr = searchCascadeTime - node.cascadeRevealTime;
+            if (tr < 0) scaleMul = 0.3;
+            else if (tr < 0.5) scaleMul = 0.3 + 0.7 * (1 - Math.pow(1 - tr / 0.5, 3));
+            // else: fully grown → scaleMul stays 1
           } else {
             scaleMul = 0.5;
           }
@@ -2813,6 +3232,9 @@
         mesh.scale.setScalar(ud.baseSize * pulse * scaleMul);
         mesh.position.copy(node.position);
       }
+
+      // Update leader-line labels (follows globe rotation)
+      updateLeaderLabels(dt);
 
       // Update edge positions (static — just needs first-frame copy)
       if (globalElapsed < 0.1) {
@@ -2835,6 +3257,7 @@
       edgeMat.uniforms.uCascadeTime.value = cascadeTime;
       edgeMat.uniforms.uSteadyMix.value = steadyMix;
       edgeMat.uniforms.uGlobalAlpha.value = globalAlpha;
+      edgeMat.uniforms.uSearchMode.value = searchActive ? 1.0 : 0.0;
       edgeMat.uniforms.uGrowDuration.value = isFirstCascade ? STARTUP_GROW : EDGE_GROW_DUR;
 
       // Update pinned tooltip position (follows node through rotation)
