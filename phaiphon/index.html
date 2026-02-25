@@ -850,15 +850,15 @@
     PD.signs.forEach((sign, i) => {
       const size = sign.cls === 'undeciphered' ? 10 : (sign.cls === 'vowel' ? 14 : 10);
       const color = sign.cls === 'undeciphered'
-        ? new THREE.Color('#886622')
-        : new THREE.Color('#FFB347');
+        ? new THREE.Color('#BB9933')
+        : new THREE.Color('#FFD080');
       const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0 });
       const mesh = new THREE.Mesh(signGeo, mat);
       mesh.position.copy(signPositions[i]);
       mesh.scale.setScalar(size);
       mesh.userData = {
         type: 'sign', signData: sign, baseSize: size,
-        targetOpacity: 0.95, currentOpacity: 0,
+        targetOpacity: 1.0, currentOpacity: 0,
         baseColor: color.clone(),
       };
       overlayGroup.add(mesh);
