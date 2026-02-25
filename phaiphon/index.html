@@ -801,21 +801,27 @@
       }
     `;
 
-    // Build phylo edge geometry
+    // Build phylo edge geometry — per-vertex proximity for smooth gradients
     const pePos = [], pePhase = [], peFiber = [], peProg = [], peCol = [], peProx = [];
-    const _tc = new THREE.Color();
+    const _tc0 = new THREE.Color(), _tc1 = new THREE.Color();
     for (const edge of phyloEdges) {
       const a = phyloNodes[edge.sourceIdx].position;
       const b = phyloNodes[edge.targetIdx].position;
       const fc = FAMILY_COLORS[phyloNodes[edge.sourceIdx].family] || [0.0, 0.8, 0.5];
-      // Edge proximity = max of its two endpoints
-      const prox = Math.max(nodeProximity[edge.sourceIdx], nodeProximity[edge.targetIdx]);
-      // Color scales with proximity: dim gray far away, full family color near candidates
-      _tc.setHSL(fc[0], fc[1], fc[2]).multiplyScalar(0.15 + prox * 0.55);
+      // Per-endpoint proximity — creates gradient along edge
+      const proxA = nodeProximity[edge.sourceIdx];
+      const proxB = nodeProximity[edge.targetIdx];
+      // Base color without proximity (shader handles brightness via vProximity)
+      _tc0.setHSL(fc[0], fc[1], fc[2]).multiplyScalar(0.35);
+      _tc1.copy(_tc0);
       const phase = Math.random() * Math.PI * 2;
-      const speed = 0.06 + prox * 0.12 + Math.random() * 0.06;
+      const avgProx = (proxA + proxB) * 0.5;
+      const speed = 0.06 + avgProx * 0.12 + Math.random() * 0.06;
       for (let s = 0; s < SEGMENTS; s++) {
         const t0 = s / SEGMENTS, t1 = (s + 1) / SEGMENTS;
+        // Interpolate proximity along edge for each segment vertex
+        const p0 = proxA + (proxB - proxA) * t0;
+        const p1 = proxA + (proxB - proxA) * t1;
         pePos.push(
           a.x+(b.x-a.x)*t0, a.y+(b.y-a.y)*t0, a.z+(b.z-a.z)*t0,
           a.x+(b.x-a.x)*t1, a.y+(b.y-a.y)*t1, a.z+(b.z-a.z)*t1
@@ -823,8 +829,8 @@
         pePhase.push(phase, phase);
         peFiber.push(speed, speed);
         peProg.push(t0, t1);
-        peProx.push(prox, prox);
-        peCol.push(_tc.r, _tc.g, _tc.b, _tc.r, _tc.g, _tc.b);
+        peProx.push(p0, p1);
+        peCol.push(_tc0.r, _tc0.g, _tc0.b, _tc1.r, _tc1.g, _tc1.b);
       }
     }
 
