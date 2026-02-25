@@ -644,7 +644,7 @@
         const neighbor = e.sourceIdx === cur ? e.targetIdx : e.sourceIdx;
         if (curDist + 1 < nodeDist[neighbor]) {
           nodeDist[neighbor] = curDist + 1;
-          nodeProximity[neighbor] = Math.pow(1 - (curDist + 1) / (MAX_DIST + 1), 4.0);
+          nodeProximity[neighbor] = Math.pow(1 - (curDist + 1) / (MAX_DIST + 1), 5.0);
           bfsQueue.push(neighbor);
         }
       }
@@ -668,9 +668,10 @@
         baseColor.multiplyScalar(1.2);
       } else {
         const prox = nodeProximity[i];
-        size = 1.5 + prox * 6; // much bigger near candidates, tiny far away
+        size = 2.5 + prox * 5; // bigger near candidates but still visible far away
         opacity = 0;
-        baseColor.multiplyScalar(0.15 + prox * 0.7);
+        // Nodes always reasonably bright — proximity only boosts, doesn't kill
+        baseColor.multiplyScalar(0.45 + prox * 0.45);
       }
 
       const mat = new THREE.MeshBasicMaterial({ color: baseColor, transparent: true, opacity: 0 });
@@ -680,7 +681,8 @@
       mesh.userData = {
         baseSize: size,
         baseColor: baseColor.clone(),
-        targetOpacity: isCandidate ? 0.9 : (0.02 + nodeProximity[i] * 0.5),
+        // Nodes visible everywhere — unrelated languages are dots without bright edges
+        targetOpacity: isCandidate ? 0.9 : (0.25 + nodeProximity[i] * 0.35),
         currentOpacity: 0,
         isCandidate,
         nodeIndex: i,
@@ -773,10 +775,11 @@
         vGlobalAlpha = uGlobalAlpha;
         vColor = aColor;
         vProximity = aProximity;
+        // Directional fiber pulse: flows from progress=0 (candidate end) outward
         float fiberPos = fract(uTime * aFiberSpeed + aPhaseOffset);
         float d = abs(aEdgeProgress - fiberPos);
-        d = min(d, 1.0 - d);
-        vFiberAlpha = exp(-d * d * 300.0);
+        // No wrapping — pulse dies at far end, reappears at candidate end
+        vFiberAlpha = exp(-d * d * 200.0);
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `;
@@ -787,14 +790,14 @@
       varying float vProximity;
       varying vec3 vColor;
       void main() {
-        // Sharp contrast: nearly invisible far away, blazing near candidates
-        float p = vProximity * vProximity; // extra contrast curve in shader
-        float base = mix(0.01, 0.6, p);
-        float fiber = vFiberAlpha * mix(0.02, 0.7, p);
+        // Cubic contrast: nearly invisible far away, blazing near candidates
+        float p = vProximity * vProximity * vProximity;
+        float base = mix(0.005, 0.7, p);
+        float fiber = vFiberAlpha * mix(0.01, 0.9, p);
         float alpha = (base + fiber) * vGlobalAlpha;
         vec3 color = vColor;
         // Brighten and warm-shift near candidates
-        color = mix(color, vec3(1.0, 0.88, 0.75), p * 0.7);
+        color = mix(color, vec3(1.0, 0.88, 0.75), p * 0.75);
         color = mix(color, vec3(1.0, 0.95, 0.85), vFiberAlpha * p * 0.9);
         if (alpha < 0.001) discard;
         gl_FragColor = vec4(color, alpha);
@@ -802,24 +805,26 @@
     `;
 
     // Build phylo edge geometry — per-vertex proximity for smooth gradients
+    // Edge progress oriented so high-proximity end = 0 (fiber pulses flow outward from candidates)
     const pePos = [], pePhase = [], peFiber = [], peProg = [], peCol = [], peProx = [];
-    const _tc0 = new THREE.Color(), _tc1 = new THREE.Color();
+    const _tc0 = new THREE.Color();
     for (const edge of phyloEdges) {
-      const a = phyloNodes[edge.sourceIdx].position;
-      const b = phyloNodes[edge.targetIdx].position;
       const fc = FAMILY_COLORS[phyloNodes[edge.sourceIdx].family] || [0.0, 0.8, 0.5];
-      // Per-endpoint proximity — creates gradient along edge
-      const proxA = nodeProximity[edge.sourceIdx];
-      const proxB = nodeProximity[edge.targetIdx];
-      // Base color without proximity (shader handles brightness via vProximity)
+      const proxSrc = nodeProximity[edge.sourceIdx];
+      const proxTgt = nodeProximity[edge.targetIdx];
+      // Orient edge: high-proximity end first (progress=0 → candidate side)
+      const flipped = proxTgt > proxSrc;
+      const a = flipped ? phyloNodes[edge.targetIdx].position : phyloNodes[edge.sourceIdx].position;
+      const b = flipped ? phyloNodes[edge.sourceIdx].position : phyloNodes[edge.targetIdx].position;
+      const proxA = flipped ? proxTgt : proxSrc; // high end
+      const proxB = flipped ? proxSrc : proxTgt; // low end
+      // Base color (shader handles proximity-based brightness)
       _tc0.setHSL(fc[0], fc[1], fc[2]).multiplyScalar(0.35);
-      _tc1.copy(_tc0);
       const phase = Math.random() * Math.PI * 2;
       const avgProx = (proxA + proxB) * 0.5;
-      const speed = 0.06 + avgProx * 0.12 + Math.random() * 0.06;
+      const speed = 0.08 + avgProx * 0.18 + Math.random() * 0.06;
       for (let s = 0; s < SEGMENTS; s++) {
         const t0 = s / SEGMENTS, t1 = (s + 1) / SEGMENTS;
-        // Interpolate proximity along edge for each segment vertex
         const p0 = proxA + (proxB - proxA) * t0;
         const p1 = proxA + (proxB - proxA) * t1;
         pePos.push(
@@ -830,7 +835,7 @@
         peFiber.push(speed, speed);
         peProg.push(t0, t1);
         peProx.push(p0, p1);
-        peCol.push(_tc0.r, _tc0.g, _tc0.b, _tc1.r, _tc1.g, _tc1.b);
+        peCol.push(_tc0.r, _tc0.g, _tc0.b, _tc0.r, _tc0.g, _tc0.b);
       }
     }
 
