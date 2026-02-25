@@ -780,7 +780,11 @@
         vProximity = aProximity;
         // BFS wavefront reveal: light courses from candidates outward
         float revealProgress = uWaveFront - aNodeDist;
-        vReveal = smoothstep(-0.08, 0.20, revealProgress);
+        float waveReveal = smoothstep(-0.08, 0.20, revealProgress);
+        // Ambient fade for unrelated branches: eases in from ~30% through
+        float ambientT = clamp((uWaveFront / 1.15 - 0.3) / 0.7, 0.0, 1.0);
+        float ambientReveal = ambientT * ambientT;
+        vReveal = max(waveReveal, ambientReveal);
         vWavefrontGlow = exp(-revealProgress * revealProgress * 40.0) * smoothstep(-0.1, 0.02, revealProgress);
         // Directional fiber pulse: flows from progress=0 (candidate end) outward
         float fiberPos = fract(uTime * aFiberSpeed + aPhaseOffset);
@@ -1542,9 +1546,12 @@
         if (animPhase === 'phyloReveal') {
           const ndist = nodeDist[i] / MAX_DIST;
           const rp = phyloWaveFront - ndist;
-          // Gentle ramp: node fades in over ~5 BFS hops of wave travel
-          targetOp *= Math.max(0, Math.min(1, rp * 4));
-          // Wide wavefront glow for chain-reaction feel
+          const waveReveal = Math.max(0, Math.min(1, rp * 4));
+          // Ambient fade for unrelated nodes: eases in from ~30% through
+          const timeT = Math.max(0, Math.min(1, (phyloWaveFront / 1.15 - 0.3) / 0.7));
+          const ambientReveal = timeT * timeT;
+          targetOp *= Math.max(waveReveal, ambientReveal);
+          // Wavefront glow only on BFS wave frontier
           wfGlow = rp > -0.1 ? Math.exp(-rp * rp * 40) : 0;
         }
 
