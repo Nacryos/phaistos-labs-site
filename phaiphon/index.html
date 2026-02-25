@@ -1396,6 +1396,13 @@
       familyNodeIndices.get(n.family).push(i);
     });
 
+    // Only candidate families are label-eligible (the lit-up branches)
+    const candidateFamilies = new Set();
+    PD.candidates.forEach(c => {
+      const idx = candidatePhyloIdx.get(c.id);
+      if (idx !== undefined) candidateFamilies.add(phyloNodes[idx].family);
+    });
+
     function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 
     function createLeaderLabel(key, name, nodeIndices) {
@@ -1582,6 +1589,9 @@
       if (!maxDist) maxDist = 18;
       let bestDist = maxDist + 1, bestFamily = null;
       for (const edge of phyloEdges) {
+        // Only test edges in candidate families (the lit-up branches)
+        const fam = phyloNodes[edge.sourceIdx].family;
+        if (!candidateFamilies.has(fam)) continue;
         phyloMeshes[edge.sourceIdx].getWorldPosition(_tmpA);
         _tmpA.project(camera);
         if (_tmpA.z > 1) continue;
@@ -1595,7 +1605,7 @@
         const d = pointToSegmentDist(mx, my, sx1, sy1, sx2, sy2);
         if (d < bestDist) {
           bestDist = d;
-          bestFamily = phyloNodes[edge.sourceIdx].family;
+          bestFamily = fam;
         }
       }
       return bestFamily;
@@ -1610,13 +1620,15 @@
         showTooltip(overlayHits[0].object.userData, e.clientX, e.clientY);
         return;
       }
-      // Check phylo nodes — if a node is hit, toggle its family label
+      // Check phylo nodes — toggle family label only for candidate families
       const phyloHits = raycaster.intersectObjects(phyloMeshes);
       if (phyloHits.length > 0) {
         const hitData = phyloHits[0].object.userData;
         const family = phyloNodes[hitData.nodeIndex].family;
-        const indices = familyNodeIndices.get(family);
-        if (indices) toggleLeaderLabel(family, family, indices);
+        if (candidateFamilies.has(family)) {
+          const indices = familyNodeIndices.get(family);
+          if (indices) toggleLeaderLabel(family, family, indices);
+        }
         showTooltip(hitData, e.clientX, e.clientY);
         return;
       }
