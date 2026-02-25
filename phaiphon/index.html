@@ -671,7 +671,7 @@
         const prox = nodeProximity[i];
         size = 3.5 + prox * 4.5;
         opacity = 0;
-        baseColor.multiplyScalar(0.6 + prox * 0.35);
+        baseColor.multiplyScalar(0.4 + prox * 0.45);
       }
 
       const mat = new THREE.MeshBasicMaterial({ color: baseColor, transparent: true, opacity: 0 });
@@ -681,7 +681,7 @@
       mesh.userData = {
         baseSize: size,
         baseColor: baseColor.clone(),
-        targetOpacity: isCandidate ? 0.9 : (0.45 + nodeProximity[i] * 0.35),
+        targetOpacity: isCandidate ? 0.9 : (0.25 + nodeProximity[i] * 0.45),
         currentOpacity: 0,
         isCandidate,
         nodeIndex: i,
@@ -784,8 +784,8 @@
         float waveReveal = smoothstep(-0.08, 0.20, revealProgress);
         float proxGate = smoothstep(0.0, 0.03, aProximity);
         float proxGated = waveReveal * proxGate;
-        // Smooth transition to ungated in steady state (uWaveFront > 1.2)
-        float steadyBlend = smoothstep(1.2, 1.6, uWaveFront);
+        // Smooth transition to ungated in steady state (uWaveFront > 1.15)
+        float steadyBlend = smoothstep(1.15, 1.35, uWaveFront);
         vReveal = mix(proxGated, 1.0, steadyBlend);
         vWavefrontGlow = exp(-revealProgress * revealProgress * 40.0) * smoothstep(-0.1, 0.02, revealProgress);
         // Directional fiber pulse: flows from progress=0 (candidate end) outward
@@ -1287,12 +1287,12 @@
 
     // Phase durations
     const PHASE = {
-      darkBirth: 0.3,
-      signEmergence: 0.6,
-      wordBloom: 0.7,
-      inscriptionRing: 0.3,
-      phyloReveal: 8.0,
-      scanPulse: 1.0,
+      darkBirth: 0.2,
+      signEmergence: 0.5,
+      wordBloom: 0.5,
+      inscriptionRing: 0.2,
+      phyloReveal: 5.0,
+      scanPulse: 0.6,
       // Steady state cycle
       steady: 12,
       candidateSpotlight: 8,
@@ -1550,8 +1550,8 @@
           const ndist = nodeDist[i] / MAX_DIST;
           const rp = phyloWaveFront - ndist;
           const waveReveal = Math.max(0, Math.min(1, rp * 4));
-          // Ambient node glow: starts early (10% through), no edges
-          const timeT = Math.max(0, Math.min(1, (phyloWaveFront / 1.15 - 0.1) / 0.9));
+          // Ambient node glow: starts very early (5% through), fast ramp, no edges
+          const timeT = Math.max(0, Math.min(1, (phyloWaveFront / 1.15 - 0.05) / 0.6));
           const ambientReveal = timeT * timeT;
           targetOp *= Math.max(waveReveal, ambientReveal);
           // Wavefront glow only on BFS wave frontier
