@@ -644,7 +644,7 @@
         const neighbor = e.sourceIdx === cur ? e.targetIdx : e.sourceIdx;
         if (curDist + 1 < nodeDist[neighbor]) {
           nodeDist[neighbor] = curDist + 1;
-          nodeProximity[neighbor] = Math.pow(1 - (curDist + 1) / (MAX_DIST + 1), 2.0);
+          nodeProximity[neighbor] = Math.pow(1 - (curDist + 1) / (MAX_DIST + 1), 4.0);
           bfsQueue.push(neighbor);
         }
       }
@@ -668,9 +668,9 @@
         baseColor.multiplyScalar(1.2);
       } else {
         const prox = nodeProximity[i];
-        size = 2 + prox * 4; // bigger near candidates
+        size = 1.5 + prox * 6; // much bigger near candidates, tiny far away
         opacity = 0;
-        baseColor.multiplyScalar(0.25 + prox * 0.55);
+        baseColor.multiplyScalar(0.15 + prox * 0.7);
       }
 
       const mat = new THREE.MeshBasicMaterial({ color: baseColor, transparent: true, opacity: 0 });
@@ -680,7 +680,7 @@
       mesh.userData = {
         baseSize: size,
         baseColor: baseColor.clone(),
-        targetOpacity: isCandidate ? 0.9 : (0.06 + nodeProximity[i] * 0.35),
+        targetOpacity: isCandidate ? 0.9 : (0.02 + nodeProximity[i] * 0.5),
         currentOpacity: 0,
         isCandidate,
         nodeIndex: i,
@@ -787,15 +787,15 @@
       varying float vProximity;
       varying vec3 vColor;
       void main() {
-        // Baseline: 0.03 for distant edges, up to 0.45 for candidate-adjacent
-        float base = mix(0.03, 0.45, vProximity);
-        // Fiber pulse also scales with proximity
-        float fiber = vFiberAlpha * mix(0.05, 0.5, vProximity);
+        // Sharp contrast: nearly invisible far away, blazing near candidates
+        float p = vProximity * vProximity; // extra contrast curve in shader
+        float base = mix(0.01, 0.6, p);
+        float fiber = vFiberAlpha * mix(0.02, 0.7, p);
         float alpha = (base + fiber) * vGlobalAlpha;
         vec3 color = vColor;
-        // Brighten color near candidates
-        color = mix(color, vec3(1.0, 0.88, 0.75), vProximity * 0.6);
-        color = mix(color, vec3(1.0, 0.95, 0.85), vFiberAlpha * vProximity * 0.8);
+        // Brighten and warm-shift near candidates
+        color = mix(color, vec3(1.0, 0.88, 0.75), p * 0.7);
+        color = mix(color, vec3(1.0, 0.95, 0.85), vFiberAlpha * p * 0.9);
         if (alpha < 0.001) discard;
         gl_FragColor = vec4(color, alpha);
       }
@@ -1262,12 +1262,12 @@
 
     // Phase durations
     const PHASE = {
-      darkBirth: 2,
-      signEmergence: 3,
-      wordBloom: 4,
-      inscriptionRing: 2,
-      phyloReveal: 4,
-      scanPulse: 5,
+      darkBirth: 0.5,
+      signEmergence: 1.0,
+      wordBloom: 1.2,
+      inscriptionRing: 0.6,
+      phyloReveal: 1.2,
+      scanPulse: 1.5,
       // Steady state cycle
       steady: 12,
       candidateSpotlight: 8,
