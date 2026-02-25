@@ -780,8 +780,8 @@
         vProximity = aProximity;
         // BFS wavefront reveal: light courses from candidates outward
         float revealProgress = uWaveFront - aNodeDist;
-        vReveal = smoothstep(-0.02, 0.08, revealProgress);
-        vWavefrontGlow = exp(-revealProgress * revealProgress * 300.0) * step(-0.05, revealProgress);
+        vReveal = smoothstep(-0.08, 0.20, revealProgress);
+        vWavefrontGlow = exp(-revealProgress * revealProgress * 40.0) * smoothstep(-0.1, 0.02, revealProgress);
         // Directional fiber pulse: flows from progress=0 (candidate end) outward
         float fiberPos = fract(uTime * aFiberSpeed + aPhaseOffset);
         float d = abs(aEdgeProgress - fiberPos);
@@ -801,14 +801,14 @@
         float p = vProximity * vProximity * vProximity;
         float base = mix(0.005, 0.7, p);
         float fiber = vFiberAlpha * mix(0.01, 0.9, p);
-        // Wavefront pulse adds bright glow at the expanding wave edge
-        float wavefront = vWavefrontGlow * 1.2;
+        // Wavefront pulse adds gentle glow at the expanding wave edge
+        float wavefront = vWavefrontGlow * 0.6;
         float alpha = (base + fiber + wavefront) * vGlobalAlpha * vReveal;
         vec3 color = vColor;
         color = mix(color, vec3(1.0, 0.88, 0.75), p * 0.75);
         color = mix(color, vec3(1.0, 0.95, 0.85), vFiberAlpha * p * 0.9);
-        // Bright warm white at wavefront
-        color = mix(color, vec3(1.0, 0.97, 0.90), vWavefrontGlow * 0.95);
+        // Warm white at wavefront
+        color = mix(color, vec3(1.0, 0.97, 0.90), vWavefrontGlow * 0.6);
         if (alpha < 0.001) discard;
         gl_FragColor = vec4(color, alpha);
       }
@@ -1285,7 +1285,7 @@
       signEmergence: 0.6,
       wordBloom: 0.7,
       inscriptionRing: 0.3,
-      phyloReveal: 3.5,
+      phyloReveal: 8.0,
       scanPulse: 1.0,
       // Steady state cycle
       steady: 12,
@@ -1537,22 +1537,24 @@
           }
         }
 
-        // BFS wave reveal during phyloReveal
+        // BFS wave reveal during phyloReveal — gradual chain reaction
         let wfGlow = 0;
         if (animPhase === 'phyloReveal') {
           const ndist = nodeDist[i] / MAX_DIST;
           const rp = phyloWaveFront - ndist;
-          targetOp *= Math.max(0, Math.min(1, rp * 10));
-          wfGlow = rp > -0.05 ? Math.exp(-rp * rp * 300) : 0;
+          // Gentle ramp: node fades in over ~5 BFS hops of wave travel
+          targetOp *= Math.max(0, Math.min(1, rp * 4));
+          // Wide wavefront glow for chain-reaction feel
+          wfGlow = rp > -0.1 ? Math.exp(-rp * rp * 40) : 0;
         }
 
         ud.currentOpacity += (targetOp - ud.currentOpacity) * Math.min(1, dt * 3);
         mesh.material.opacity = ud.currentOpacity;
 
-        // Wavefront color flash
+        // Wavefront color warmth
         mesh.material.color.copy(ud.baseColor);
         if (wfGlow > 0.05) {
-          mesh.material.color.lerp(COLOR_WAVEFRONT, wfGlow * 0.7);
+          mesh.material.color.lerp(COLOR_WAVEFRONT, wfGlow * 0.4);
         }
 
         // Candidate pulse
