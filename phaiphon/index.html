@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhaiPhon — Linear A Decipherment Visualization</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      color: #fff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+      height: 100vh;
+    }
+    canvas { display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
+
+    #graph-container {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+
+    /* Back link */
+    #back-link {
+      position: fixed;
+      top: 20px;
+      left: 24px;
+      z-index: 100;
+      color: rgba(255, 255, 255, 0.35);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 1px;
+      transition: color 0.2s;
+    }
+    #back-link:hover { color: rgba(255, 255, 255, 0.7); }
+
+    /* Title overlay */
+    #title-overlay {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      text-align: center;
+      pointer-events: none;
+    }
+    #title-overlay h1 {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(255, 180, 70, 0.7);
+    }
+    #title-overlay .subtitle {
+      font-size: 11px;
+      font-weight: 300;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, 0.3);
+      margin-top: 4px;
+    }
+
+    /* Mode selector panel */
+    #mode-panel {
+      position: fixed;
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .mode-btn {
+      background: rgba(5, 5, 7, 0.30);
+      backdrop-filter: blur(24px) saturate(1.2);
+      -webkit-backdrop-filter: blur(24px) saturate(1.2);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 4px;
+      padding: 8px 14px;
+      color: rgba(255, 255, 255, 0.35);
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 10.5px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      text-align: left;
+      white-space: nowrap;
+    }
+    .mode-btn:hover {
+      color: rgba(255, 255, 255, 0.6);
+      border-color: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .mode-btn.active {
+      color: rgba(255, 180, 70, 0.85);
+      border-color: rgba(255, 180, 70, 0.2);
+      background: rgba(255, 180, 70, 0.06);
+    }
+
+    /* Stats overlay (bottom-right) */
+    #stats-overlay {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 100;
+      background: rgba(5, 5, 7, 0.25);
+      backdrop-filter: blur(24px) saturate(1.2);
+      -webkit-backdrop-filter: blur(24px) saturate(1.2);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 5px;
+      padding: 14px 18px;
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 11px;
+      line-height: 1.7;
+      color: rgba(255, 255, 255, 0.5);
+      min-width: 220px;
+      max-width: 300px;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+    .stat-header {
+      color: rgba(255, 180, 70, 0.7);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 4px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .stat-label { color: rgba(255, 255, 255, 0.3); }
+    .stat-value { color: rgba(255, 255, 255, 0.65); text-align: right; }
+    .stat-value.gold { color: rgba(255, 180, 70, 0.8); }
+
+    /* Hypothesis card */
+    #hypothesis-card {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      background: rgba(5, 5, 7, 0.35);
+      backdrop-filter: blur(24px) saturate(1.2);
+      -webkit-backdrop-filter: blur(24px) saturate(1.2);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 16px 24px;
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      text-align: center;
+      max-width: 500px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+    #hypothesis-card.visible {
+      opacity: 1;
+    }
+    .hyp-name {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .hyp-verdict {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .hyp-detail {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    /* Tooltip */
+    #tooltip {
+      position: fixed;
+      display: none;
+      background: rgba(5, 5, 7, 0.30);
+      backdrop-filter: blur(24px) saturate(1.2);
+      -webkit-backdrop-filter: blur(24px) saturate(1.2);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 5px;
+      padding: 14px 18px;
+      color: #ccc;
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      pointer-events: none;
+      max-width: 380px;
+      min-width: 200px;
+      z-index: 200;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+    }
+    .tt-header {
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 1.5px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      padding-bottom: 6px;
+    }
+    .tt-row { display: flex; gap: 10px; }
+    .tt-label { color: rgba(255,255,255,0.3); min-width: 80px; flex-shrink: 0; }
+    .tt-value { color: rgba(255,255,255,0.7); }
+    .tt-gold { color: rgba(255, 180, 70, 0.8); }
+    .tt-bar {
+      display: inline-block;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255, 180, 70, 0.6);
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+
+    /* Smoke test note */
+    #smoke-note {
+      position: fixed;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.15);
+      font-family: 'Courier New', monospace;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      #mode-panel {
+        left: 10px;
+        top: auto;
+        bottom: 10px;
+        transform: none;
+        flex-direction: row;
+        flex-wrap: wrap;
+        max-width: calc(100vw - 20px);
+      }
+      .mode-btn {
+        padding: 6px 10px;
+        font-size: 9px;
+      }
+      #stats-overlay {
+        display: none;
+      }
+      #title-overlay h1 { font-size: 13px; }
+      #title-overlay .subtitle { font-size: 9px; }
+      #back-link { font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="graph-container"></div>
+
+  <a id="back-link" href="../index.html">&larr; Phaistos Labs</a>
+
+  <div id="title-overlay">
+    <h1>PhaiPhon</h1>
+    <div class="subtitle">Linear A Decipherment Visualization</div>
+  </div>
+
+  <div id="mode-panel">
+    <button class="mode-btn active" data-mode="fullScan">Full Scan</button>
+    <button class="mode-btn" data-mode="topCandidates">Top 3</button>
+    <button class="mode-btn" data-mode="families">Families</button>
+    <button class="mode-btn" data-mode="vowelHarmony">Vowels</button>
+    <button class="mode-btn" data-mode="signExplorer">Signs</button>
+    <button class="mode-btn" data-mode="inscriptions">Texts</button>
+  </div>
+
+  <div id="stats-overlay">
+    <div class="stat-header">Scan Results</div>
+    <div class="stat-row"><span class="stat-label">Signs</span><span class="stat-value">34</span></div>
+    <div class="stat-row"><span class="stat-label">Words</span><span class="stat-value">73</span></div>
+    <div class="stat-row"><span class="stat-label">Inscriptions</span><span class="stat-value">48</span></div>
+    <div class="stat-row"><span class="stat-label">Candidates</span><span class="stat-value">16</span></div>
+    <div id="stats-dynamic"></div>
+  </div>
+
+  <div id="hypothesis-card">
+    <div class="hyp-name" id="hyp-name"></div>
+    <div class="hyp-verdict" id="hyp-verdict"></div>
+    <div class="hyp-detail" id="hyp-detail"></div>
+  </div>
+
+  <div id="tooltip"></div>
+
+  <div id="smoke-note">50-step smoke test &middot; full 3000-step run in progress</div>
+
+  <script src="../language_data.js"></script>
+  <script src="phaiphon_data.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+    const PD = window.PHAIPHON_DATA;
+    const raw = window.LANGUAGE_DATA;
+
+    // ================================================================
+    // PROCESS LANGUAGE TREE (same as main site)
+    // ================================================================
+    const nodeMap = new Map();
+    raw.nodes.forEach(n => nodeMap.set(n.id, n));
+    const childrenMap = new Map();
+    raw.nodes.forEach(n => childrenMap.set(n.id, []));
+    raw.edges.forEach(e => {
+      const kids = childrenMap.get(e.source);
+      if (kids) kids.push(e.target);
+    });
+    const descendantCount = new Map();
+    function countDescendants(id) {
+      if (descendantCount.has(id)) return descendantCount.get(id);
+      const kids = childrenMap.get(id) || [];
+      let count = 0;
+      for (const kid of kids) count += 1 + countDescendants(kid);
+      descendantCount.set(id, count);
+      return count;
+    }
+    raw.nodes.forEach(n => countDescendants(n.id));
+
+    // Family colors (same palette as main site)
+    const families = [...new Set(raw.nodes.map(n => n.family))];
+    const MAJOR_FAMILY_COLORS = {
+      'Indo-European': [0.0, 0.85, 0.55],
+      'Sino-Tibetan': [0.10, 0.9, 0.5],
+      'Niger-Congo': [0.93, 0.85, 0.5],
+      'Afroasiatic': [0.06, 0.82, 0.55],
+      'Austronesian': [0.14, 0.85, 0.48],
+      'Dravidian': [0.02, 0.78, 0.5],
+      'Turkic': [0.08, 0.82, 0.45],
+      'Uralic': [0.96, 0.72, 0.55],
+      'Basque': [0.12, 0.88, 0.50],
+      'Kartvelian': [0.95, 0.75, 0.55],
+    };
+    const FAMILY_COLORS = {};
+    families.forEach((fam, i) => {
+      if (MAJOR_FAMILY_COLORS[fam]) {
+        FAMILY_COLORS[fam] = MAJOR_FAMILY_COLORS[fam];
+      } else {
+        const hue = (i * 0.618033988749895) % 1;
+        const warmHue = ((hue * 0.25) + 0.9) % 1;
+        FAMILY_COLORS[fam] = [warmHue, 0.7 + Math.random() * 0.2, 0.4 + Math.random() * 0.15];
+      }
+    });
+
+    // ================================================================
+    // BUILD PHYLOGENETIC GRAPH (same force layout as main site)
+    // ================================================================
+    const SPREAD = 1200;
+    const NODE_COUNT = raw.nodes.length;
+    const COLOR_CREAM = new THREE.Color('#fff5e6');
+    const COLOR_GOLD = new THREE.Color('#FFB347');
+    const COLOR_AMBER = new THREE.Color('#CC8833');
+
+    const phyloNodes = raw.nodes.map((n, i) => {
+      const desc = descendantCount.get(n.id) || 0;
+      const experience = Math.min(1, desc / 80);
+      const speakers = n.speakers || 0;
+      const recency = speakers > 0 ? Math.min(1, 0.3 + Math.log10(Math.max(1, speakers)) / 10) : 0.1;
+      return {
+        ...n, index: i, descendantCount: desc, experience, recency,
+        position: new THREE.Vector3(
+          (Math.random() - 0.5) * SPREAD,
+          (Math.random() - 0.5) * SPREAD,
+          (Math.random() - 0.5) * SPREAD
+        ),
+        velocity: new THREE.Vector3(),
+      };
+    });
+
+    const phyloEdges = raw.edges.map(e => {
+      const si = raw.nodes.findIndex(n => n.id === e.source);
+      const ti = raw.nodes.findIndex(n => n.id === e.target);
+      return { sourceIdx: si, targetIdx: ti, source: e.source, target: e.target };
+    }).filter(e => e.sourceIdx >= 0 && e.targetIdx >= 0);
+
+    // Build adjacency for BFS
+    const adjacency = Array.from({ length: NODE_COUNT }, () => []);
+    for (let ei = 0; ei < phyloEdges.length; ei++) {
+      adjacency[phyloEdges[ei].sourceIdx].push(ei);
+      adjacency[phyloEdges[ei].targetIdx].push(ei);
+    }
+
+    // Initial positions: family clustering
+    function gaussRand() {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    }
+    const familyGroups = new Map();
+    phyloNodes.forEach((n, i) => {
+      if (!familyGroups.has(n.family)) familyGroups.set(n.family, []);
+      familyGroups.get(n.family).push(i);
+    });
+    const famRadius = SPREAD * 0.4;
+    familyGroups.forEach((indices, family) => {
+      const theta = Math.random() * Math.PI * 2;
+      const cosP = 2 * Math.random() - 1;
+      const sinP = Math.sqrt(1 - cosP * cosP);
+      const rFam = famRadius * (0.3 + 0.7 * Math.random());
+      const cx = rFam * sinP * Math.cos(theta);
+      const cy = rFam * sinP * Math.sin(theta);
+      const cz = rFam * cosP;
+      const clusterRadius = Math.min(SPREAD * 0.3, 30 + indices.length * 1.5);
+      indices.forEach(ni => {
+        const node = phyloNodes[ni];
+        node.position.set(cx + gaussRand() * clusterRadius * 0.4,
+                          cy + gaussRand() * clusterRadius * 0.4,
+                          cz + gaussRand() * clusterRadius * 0.4);
+      });
+    });
+
+    // Force simulation
+    const GRID_SIZE = 8, REPULSION = 6000, SPRING_K = 0.008, REST_LEN = 15, DAMPING = 0.85, CENTER_PULL = 0.002;
+    const _diff = new THREE.Vector3();
+    function simulateForces() {
+      const ns = phyloNodes;
+      const gridCells = new Map();
+      const cellSize = SPREAD / GRID_SIZE;
+      for (let i = 0; i < NODE_COUNT; i++) {
+        const p = ns[i].position;
+        const key = `${Math.floor(p.x/cellSize)},${Math.floor(p.y/cellSize)},${Math.floor(p.z/cellSize)}`;
+        if (!gridCells.has(key)) gridCells.set(key, []);
+        gridCells.get(key).push(i);
+      }
+      for (const [key, cell] of gridCells) {
+        const [gx, gy, gz] = key.split(',').map(Number);
+        for (let dx = -1; dx <= 1; dx++)
+          for (let dy = -1; dy <= 1; dy++)
+            for (let dz = -1; dz <= 1; dz++) {
+              const ncell = gridCells.get(`${gx+dx},${gy+dy},${gz+dz}`);
+              if (!ncell) continue;
+              for (const i of cell) for (const j of ncell) {
+                if (j <= i) continue;
+                _diff.subVectors(ns[i].position, ns[j].position);
+                const dist = Math.max(_diff.length(), 1);
+                if (dist > cellSize * 3) continue;
+                const f = REPULSION / (dist * dist);
+                _diff.normalize().multiplyScalar(Math.min(f, 5));
+                ns[i].velocity.add(_diff);
+                ns[j].velocity.sub(_diff);
+              }
+            }
+      }
+      for (const e of phyloEdges) {
+        const a = ns[e.sourceIdx], b = ns[e.targetIdx];
+        _diff.subVectors(b.position, a.position);
+        const d = _diff.length();
+        _diff.normalize().multiplyScalar(SPRING_K * (d - REST_LEN));
+        a.velocity.add(_diff);
+        b.velocity.sub(_diff);
+      }
+      for (const n of ns) {
+        n.velocity.add(n.position.clone().multiplyScalar(-CENTER_PULL));
+        n.velocity.multiplyScalar(DAMPING);
+        const speed = n.velocity.length();
+        if (speed > 10) n.velocity.multiplyScalar(10 / speed);
+        n.position.add(n.velocity);
+      }
+    }
+    console.log('Running force layout...');
+    for (let i = 0; i < 80; i++) simulateForces();
+    console.log('Layout complete.');
+
+    // ================================================================
+    // MAP CANDIDATES TO PHYLO NODES
+    // ================================================================
+    const candidatePhyloIdx = new Map();
+    const phyloNodeIdToIdx = new Map();
+    phyloNodes.forEach((n, i) => phyloNodeIdToIdx.set(n.id, i));
+    PD.candidates.forEach(c => {
+      const idx = phyloNodeIdToIdx.get(c.phyloNodeId);
+      if (idx !== undefined) candidatePhyloIdx.set(c.id, idx);
+    });
+
+    // Build phylogenetic branch sets for each candidate
+    function getAncestorChain(nodeId) {
+      const chain = [];
+      let current = nodeMap.get(nodeId);
+      while (current) {
+        chain.push(current.id);
+        current = current.parentId ? nodeMap.get(current.parentId) : null;
+      }
+      return chain;
+    }
+    function getSubtree(nodeId) {
+      const tree = new Set();
+      const queue = [nodeId];
+      while (queue.length) {
+        const id = queue.shift();
+        tree.add(id);
+        const kids = childrenMap.get(id) || [];
+        kids.forEach(k => queue.push(k));
+      }
+      return tree;
+    }
+
+    // ================================================================
+    // LINEAR A OVERLAY LAYOUT
+    // ================================================================
+    // Place Linear A nodes at the center of the phylogenetic sphere
+    const SIGN_RADIUS = 80;
+    const WORD_RADIUS = 180;
+    const INSC_RADIUS = 280;
+
+    // Signs in a Fibonacci sphere
+    const signPositions = [];
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    PD.signs.forEach((sign, i) => {
+      const y = 1 - (i / (PD.signs.length - 1)) * 2;
+      const radius = Math.sqrt(1 - y * y);
+      const theta = goldenAngle * i;
+      signPositions.push(new THREE.Vector3(
+        Math.cos(theta) * radius * SIGN_RADIUS,
+        y * SIGN_RADIUS,
+        Math.sin(theta) * radius * SIGN_RADIUS
+      ));
+    });
+
+    // Words in a larger sphere, grouped near their constituent signs
+    const wordPositions = [];
+    PD.words.forEach((word, i) => {
+      // Average position of constituent signs
+      let cx = 0, cy = 0, cz = 0, cnt = 0;
+      word.signs.forEach(sid => {
+        const si = PD.signs.findIndex(s => s.id === sid);
+        if (si >= 0) {
+          cx += signPositions[si].x; cy += signPositions[si].y; cz += signPositions[si].z;
+          cnt++;
+        }
+      });
+      if (cnt > 0) { cx /= cnt; cy /= cnt; cz /= cnt; }
+      // Push outward to word radius + jitter
+      const len = Math.sqrt(cx*cx + cy*cy + cz*cz) || 1;
+      const scale = WORD_RADIUS / len;
+      wordPositions.push(new THREE.Vector3(
+        cx * scale + gaussRand() * 20,
+        cy * scale + gaussRand() * 20,
+        cz * scale + gaussRand() * 20
+      ));
+    });
+
+    // Inscriptions in outer ring
+    const inscPositions = [];
+    PD.inscriptions.forEach((insc, i) => {
+      const y = 1 - (i / (PD.inscriptions.length - 1)) * 2;
+      const radius = Math.sqrt(1 - y * y);
+      const theta = goldenAngle * i * 1.3;
+      inscPositions.push(new THREE.Vector3(
+        Math.cos(theta) * radius * INSC_RADIUS,
+        y * INSC_RADIUS,
+        Math.sin(theta) * radius * INSC_RADIUS
+      ));
+    });
+
+    // ================================================================
+    // THREE.JS SCENE
+    // ================================================================
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#000000');
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 20000);
+    camera.position.set(0, 0, 2200);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+    document.getElementById('graph-container').appendChild(renderer.domElement);
+
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      2.5, 1.0, 0.05
+    );
+    composer.addPass(bloomPass);
+
+    const worldGroup = new THREE.Group();
+    scene.add(worldGroup);
+
+    // ================================================================
+    // BACKGROUND PHYLO NODES (20% opacity, tiny)
+    // ================================================================
+    const nodeSphereGeo = new THREE.SphereGeometry(1, 8, 8);
+    const phyloMeshes = [];
+    const candidateNodeSet = new Set();
+    PD.candidates.forEach(c => {
+      const idx = candidatePhyloIdx.get(c.id);
+      if (idx !== undefined) candidateNodeSet.add(idx);
+    });
+
+    for (let i = 0; i < NODE_COUNT; i++) {
+      const node = phyloNodes[i];
+      const isCandidate = candidateNodeSet.has(i);
+      const famColor = FAMILY_COLORS[node.family] || [0.0, 0.8, 0.5];
+      const baseColor = new THREE.Color().setHSL(famColor[0], famColor[1], famColor[2]);
+
+      let size, opacity;
+      if (isCandidate) {
+        const cand = PD.candidates.find(c => candidatePhyloIdx.get(c.id) === i);
+        const score = cand && cand.composite_score ? cand.composite_score : 3;
+        size = 12 + (score / 10) * 8;
+        opacity = 0;
+        baseColor.lerp(COLOR_CREAM, 0.3);
+        baseColor.multiplyScalar(1.2);
+      } else {
+        size = 2;
+        opacity = 0;
+        baseColor.multiplyScalar(0.4);
+      }
+
+      const mat = new THREE.MeshBasicMaterial({ color: baseColor, transparent: true, opacity: 0 });
+      const mesh = new THREE.Mesh(nodeSphereGeo, mat);
+      mesh.position.copy(node.position);
+      mesh.scale.setScalar(size);
+      mesh.userData = {
+        baseSize: size,
+        baseColor: baseColor.clone(),
+        targetOpacity: isCandidate ? 0.9 : 0.12,
+        currentOpacity: 0,
+        isCandidate,
+        nodeIndex: i,
+        langData: node,
+      };
+      worldGroup.add(mesh);
+      phyloMeshes.push(mesh);
+    }
+
+    // ================================================================
+    // LINEAR A OVERLAY NODES
+    // ================================================================
+    const overlayGroup = new THREE.Group();
+    worldGroup.add(overlayGroup);
+
+    // Sign nodes (gold, large, glowing)
+    const signMeshes = [];
+    const signGeo = new THREE.SphereGeometry(1, 16, 16);
+    PD.signs.forEach((sign, i) => {
+      const size = sign.cls === 'undeciphered' ? 10 : (sign.cls === 'vowel' ? 14 : 10);
+      const color = sign.cls === 'undeciphered'
+        ? new THREE.Color('#886622')
+        : new THREE.Color('#FFB347');
+      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0 });
+      const mesh = new THREE.Mesh(signGeo, mat);
+      mesh.position.copy(signPositions[i]);
+      mesh.scale.setScalar(size);
+      mesh.userData = {
+        type: 'sign', signData: sign, baseSize: size,
+        targetOpacity: 0.95, currentOpacity: 0,
+        baseColor: color.clone(),
+      };
+      overlayGroup.add(mesh);
+      signMeshes.push(mesh);
+    });
+
+    // Word nodes (cream, medium, frequency-scaled)
+    const wordMeshes = [];
+    PD.words.forEach((word, i) => {
+      const size = 3 + Math.min(7, Math.log2(word.freq + 1) * 2.5);
+      const color = new THREE.Color('#FFF5E6');
+      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0 });
+      const mesh = new THREE.Mesh(signGeo, mat);
+      mesh.position.copy(wordPositions[i]);
+      mesh.scale.setScalar(size);
+      mesh.userData = {
+        type: 'word', wordData: word, baseSize: size,
+        targetOpacity: 0.7, currentOpacity: 0,
+        baseColor: color.clone(),
+      };
+      overlayGroup.add(mesh);
+      wordMeshes.push(mesh);
+    });
+
+    // Inscription nodes (dim amber, small)
+    const inscMeshes = [];
+    PD.inscriptions.forEach((insc, i) => {
+      const size = 3;
+      const color = new THREE.Color('#CC8833');
+      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0 });
+      const mesh = new THREE.Mesh(signGeo, mat);
+      mesh.position.copy(inscPositions[i]);
+      mesh.scale.setScalar(size);
+      mesh.userData = {
+        type: 'inscription', inscData: insc, baseSize: size,
+        targetOpacity: 0.35, currentOpacity: 0,
+        baseColor: color.clone(),
+      };
+      overlayGroup.add(mesh);
+      inscMeshes.push(mesh);
+    });
+
+    // ================================================================
+    // EDGES — Background phylogenetic (dim)
+    // ================================================================
+    const SEGMENTS = 8;
+    const phyloEdgeVS = `
+      attribute float aPhaseOffset;
+      attribute float aFiberSpeed;
+      attribute float aEdgeProgress;
+      uniform float uTime;
+      uniform float uGlobalAlpha;
+      varying float vFiberAlpha;
+      varying float vGlobalAlpha;
+      varying vec3 vColor;
+      attribute vec3 aColor;
+      void main() {
+        vGlobalAlpha = uGlobalAlpha;
+        vColor = aColor;
+        float fiberPos = fract(uTime * aFiberSpeed + aPhaseOffset);
+        float d = abs(aEdgeProgress - fiberPos);
+        d = min(d, 1.0 - d);
+        vFiberAlpha = exp(-d * d * 300.0);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `;
+    const phyloEdgeFS = `
+      uniform float uTime;
+      varying float vFiberAlpha;
+      varying float vGlobalAlpha;
+      varying vec3 vColor;
+      void main() {
+        float base = 0.08;
+        float fiber = vFiberAlpha * 0.15;
+        float alpha = (base + fiber) * vGlobalAlpha;
+        vec3 color = vColor;
+        color = mix(color, vec3(1.0, 0.88, 0.75), vFiberAlpha * 0.5);
+        if (alpha < 0.001) discard;
+        gl_FragColor = vec4(color, alpha);
+      }
+    `;
+
+    // Build phylo edge geometry
+    const pePos = [], pePhase = [], peFiber = [], peProg = [], peCol = [];
+    const _tc = new THREE.Color();
+    for (const edge of phyloEdges) {
+      const a = phyloNodes[edge.sourceIdx].position;
+      const b = phyloNodes[edge.targetIdx].position;
+      const fc = FAMILY_COLORS[phyloNodes[edge.sourceIdx].family] || [0.0, 0.8, 0.5];
+      _tc.setHSL(fc[0], fc[1], fc[2]).multiplyScalar(0.3);
+      const phase = Math.random() * Math.PI * 2;
+      const speed = 0.08 + Math.random() * 0.08;
+      for (let s = 0; s < SEGMENTS; s++) {
+        const t0 = s / SEGMENTS, t1 = (s + 1) / SEGMENTS;
+        pePos.push(
+          a.x+(b.x-a.x)*t0, a.y+(b.y-a.y)*t0, a.z+(b.z-a.z)*t0,
+          a.x+(b.x-a.x)*t1, a.y+(b.y-a.y)*t1, a.z+(b.z-a.z)*t1
+        );
+        pePhase.push(phase, phase);
+        peFiber.push(speed, speed);
+        peProg.push(t0, t1);
+        peCol.push(_tc.r, _tc.g, _tc.b, _tc.r, _tc.g, _tc.b);
+      }
+    }
+
+    const phyloEdgeGeo = new THREE.BufferGeometry();
+    phyloEdgeGeo.setAttribute('position', new THREE.Float32BufferAttribute(pePos, 3));
+    phyloEdgeGeo.setAttribute('aPhaseOffset', new THREE.Float32BufferAttribute(pePhase, 1));
+    phyloEdgeGeo.setAttribute('aFiberSpeed', new THREE.Float32BufferAttribute(peFiber, 1));
+    phyloEdgeGeo.setAttribute('aEdgeProgress', new THREE.Float32BufferAttribute(peProg, 1));
+    phyloEdgeGeo.setAttribute('aColor', new THREE.Float32BufferAttribute(peCol, 3));
+    const phyloEdgeMat = new THREE.ShaderMaterial({
+      vertexShader: phyloEdgeVS, fragmentShader: phyloEdgeFS,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      uniforms: { uTime: { value: 0 }, uGlobalAlpha: { value: 0 } },
+    });
+    const phyloEdgeMesh = new THREE.LineSegments(phyloEdgeGeo, phyloEdgeMat);
+    worldGroup.add(phyloEdgeMesh);
+
+    // ================================================================
+    // OVERLAY EDGES — Decomposition (word→signs) + Closeness beams
+    // ================================================================
+    const overlayEdgeVS = `
+      attribute float aEdgeProgress;
+      attribute float aPhaseOffset;
+      attribute float aFiberSpeed;
+      attribute float aEdgeType;
+      attribute float aWeight;
+      attribute vec3 aColor;
+      uniform float uTime;
+      uniform float uGlobalAlpha;
+      varying float vFiberAlpha;
+      varying float vGlobalAlpha;
+      varying float vEdgeType;
+      varying float vWeight;
+      varying vec3 vColor;
+      void main() {
+        vGlobalAlpha = uGlobalAlpha;
+        vEdgeType = aEdgeType;
+        vWeight = aWeight;
+        vColor = aColor;
+        float fiberPos1 = fract(uTime * aFiberSpeed + aPhaseOffset);
+        float fiberPos2 = fract(uTime * aFiberSpeed + aPhaseOffset + 0.5);
+        float d1 = abs(aEdgeProgress - fiberPos1);
+        d1 = min(d1, 1.0 - d1);
+        float d2 = abs(aEdgeProgress - fiberPos2);
+        d2 = min(d2, 1.0 - d2);
+        vFiberAlpha = max(exp(-d1 * d1 * 200.0), exp(-d2 * d2 * 200.0));
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `;
+    const overlayEdgeFS = `
+      varying float vFiberAlpha;
+      varying float vGlobalAlpha;
+      varying float vEdgeType;
+      varying float vWeight;
+      varying vec3 vColor;
+      void main() {
+        float alpha;
+        vec3 color = vColor;
+        if (vEdgeType < 0.5) {
+          // Decomposition edge (word → sign): thin, static gold
+          alpha = 0.18 * vGlobalAlpha;
+        } else if (vEdgeType < 1.5) {
+          // Closeness beam: thick, pulsing, brightness = score
+          float base = 0.3 * vWeight;
+          float fiber = vFiberAlpha * 0.8 * vWeight;
+          alpha = (base + fiber) * vGlobalAlpha;
+          color = mix(color, vec3(1.0, 0.95, 0.85), vFiberAlpha * 0.9);
+        } else {
+          // Inscription → word links: very dim
+          alpha = 0.10 * vGlobalAlpha;
+        }
+        if (alpha < 0.001) discard;
+        gl_FragColor = vec4(color, alpha);
+      }
+    `;
+
+    // Build decomposition edges (word → constituent signs)
+    const oePos = [], oePhase = [], oeFiber = [], oeProg = [], oeType = [], oeWeight = [], oeCol = [];
+    const goldC = new THREE.Color('#FFB347').multiplyScalar(0.5);
+    const amberC = new THREE.Color('#CC8833').multiplyScalar(0.3);
+
+    // Word → Sign edges
+    PD.words.forEach((word, wi) => {
+      word.signs.forEach(sid => {
+        const si = PD.signs.findIndex(s => s.id === sid);
+        if (si < 0) return;
+        const a = wordPositions[wi], b = signPositions[si];
+        const phase = Math.random() * Math.PI * 2;
+        for (let s = 0; s < SEGMENTS; s++) {
+          const t0 = s / SEGMENTS, t1 = (s + 1) / SEGMENTS;
+          oePos.push(
+            a.x+(b.x-a.x)*t0, a.y+(b.y-a.y)*t0, a.z+(b.z-a.z)*t0,
+            a.x+(b.x-a.x)*t1, a.y+(b.y-a.y)*t1, a.z+(b.z-a.z)*t1
+          );
+          oePhase.push(phase, phase);
+          oeFiber.push(0.05, 0.05);
+          oeProg.push(t0, t1);
+          oeType.push(0, 0);
+          oeWeight.push(0.3, 0.3);
+          oeCol.push(goldC.r, goldC.g, goldC.b, goldC.r, goldC.g, goldC.b);
+        }
+      });
+    });
+
+    // Count decomposition edges for stats
+    const decompEdgeCount = oePos.length / 6 / SEGMENTS;
+
+    // Closeness beams (center → candidate phylo positions)
+    const beamStartIdx = oePos.length / 6; // vertex pair index for beam start
+    const center = new THREE.Vector3(0, 0, 0);
+    PD.candidates.forEach(c => {
+      const idx = candidatePhyloIdx.get(c.id);
+      if (idx === undefined) return;
+      const target = phyloNodes[idx].position;
+      const score = c.closeness || 0.15; // placeholder for awaiting
+      const speed = 0.15 + (c.z_score || 5) * 0.008;
+      const hsl = c.displayColor || [0.08, 0.8, 0.5];
+      const beamColor = new THREE.Color().setHSL(hsl[0], hsl[1], hsl[2]);
+      beamColor.lerp(new THREE.Color('#ffffff'), 0.3);
+      const phase = Math.random() * Math.PI * 2;
+      for (let s = 0; s < SEGMENTS; s++) {
+        const t0 = s / SEGMENTS, t1 = (s + 1) / SEGMENTS;
+        oePos.push(
+          center.x+(target.x-center.x)*t0, center.y+(target.y-center.y)*t0, center.z+(target.z-center.z)*t0,
+          center.x+(target.x-center.x)*t1, center.y+(target.y-center.y)*t1, center.z+(target.z-center.z)*t1
+        );
+        oePhase.push(phase, phase);
+        oeFiber.push(speed, speed);
+        oeProg.push(t0, t1);
+        oeType.push(1, 1);
+        oeWeight.push(score, score);
+        oeCol.push(beamColor.r, beamColor.g, beamColor.b, beamColor.r, beamColor.g, beamColor.b);
+      }
+    });
+
+    // Inscription → Word edges
+    PD.inscriptions.forEach((insc, ii) => {
+      insc.words.forEach(wid => {
+        const wi = PD.words.findIndex(w => w.id === wid);
+        if (wi < 0) return;
+        const a = inscPositions[ii], b = wordPositions[wi];
+        const phase = Math.random() * Math.PI * 2;
+        for (let s = 0; s < SEGMENTS; s++) {
+          const t0 = s / SEGMENTS, t1 = (s + 1) / SEGMENTS;
+          oePos.push(
+            a.x+(b.x-a.x)*t0, a.y+(b.y-a.y)*t0, a.z+(b.z-a.z)*t0,
+            a.x+(b.x-a.x)*t1, a.y+(b.y-a.y)*t1, a.z+(b.z-a.z)*t1
+          );
+          oePhase.push(phase, phase);
+          oeFiber.push(0.03, 0.03);
+          oeProg.push(t0, t1);
+          oeType.push(2, 2);
+          oeWeight.push(0.15, 0.15);
+          oeCol.push(amberC.r, amberC.g, amberC.b, amberC.r, amberC.g, amberC.b);
+        }
+      });
+    });
+
+    const overlayEdgeGeo = new THREE.BufferGeometry();
+    overlayEdgeGeo.setAttribute('position', new THREE.Float32BufferAttribute(oePos, 3));
+    overlayEdgeGeo.setAttribute('aPhaseOffset', new THREE.Float32BufferAttribute(oePhase, 1));
+    overlayEdgeGeo.setAttribute('aFiberSpeed', new THREE.Float32BufferAttribute(oeFiber, 1));
+    overlayEdgeGeo.setAttribute('aEdgeProgress', new THREE.Float32BufferAttribute(oeProg, 1));
+    overlayEdgeGeo.setAttribute('aEdgeType', new THREE.Float32BufferAttribute(oeType, 1));
+    overlayEdgeGeo.setAttribute('aWeight', new THREE.Float32BufferAttribute(oeWeight, 1));
+    overlayEdgeGeo.setAttribute('aColor', new THREE.Float32BufferAttribute(oeCol, 3));
+    const overlayEdgeMat = new THREE.ShaderMaterial({
+      vertexShader: overlayEdgeVS, fragmentShader: overlayEdgeFS,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      uniforms: { uTime: { value: 0 }, uGlobalAlpha: { value: 0 } },
+    });
+    const overlayEdgeMesh = new THREE.LineSegments(overlayEdgeGeo, overlayEdgeMat);
+    overlayGroup.add(overlayEdgeMesh);
+
+    // ================================================================
+    // AMBIENT PARTICLES
+    // ================================================================
+    const particleCount = 250;
+    const pPos = new Float32Array(particleCount * 3);
+    const pColors = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      pPos[i*3]   = (Math.random()-0.5) * SPREAD * 4;
+      pPos[i*3+1] = (Math.random()-0.5) * SPREAD * 4;
+      pPos[i*3+2] = (Math.random()-0.5) * SPREAD * 4;
+      const r = 0.3 + Math.random() * 0.4;
+      pColors[i*3] = r; pColors[i*3+1] = r*0.3; pColors[i*3+2] = r*0.15;
+    }
+    const pGeo = new THREE.BufferGeometry();
+    pGeo.setAttribute('position', new THREE.Float32BufferAttribute(pPos, 3));
+    pGeo.setAttribute('color', new THREE.Float32BufferAttribute(pColors, 3));
+    const pMat = new THREE.PointsMaterial({
+      size: 2, transparent: true, opacity: 0.3,
+      vertexColors: true, blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    worldGroup.add(new THREE.Points(pGeo, pMat));
+
+    // ================================================================
+    // INTERACTION: drag, zoom, tooltip
+    // ================================================================
+    let isDragging = false, dragStartX = 0, dragStartY = 0, dragStartTime = 0;
+    const orientationQuat = new THREE.Quaternion();
+    const _deltaQuat = new THREE.Quaternion();
+    const _rotYAxis = new THREE.Vector3(0, 1, 0);
+    const _rotXAxis = new THREE.Vector3(1, 0, 0);
+    const mouse = { x: 0, y: 0 };
+    const BASE_ZOOM = 2200, ZOOM_MIN = 400, ZOOM_MAX = 6000;
+    let targetZoom = BASE_ZOOM;
+    const raycaster = new THREE.Raycaster();
+    raycaster.params.Points = { threshold: 10 };
+
+    renderer.domElement.addEventListener('pointerdown', e => {
+      isDragging = true;
+      dragStartX = e.clientX; dragStartY = e.clientY;
+      dragStartTime = performance.now();
+    });
+    renderer.domElement.addEventListener('pointermove', e => {
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      if (!isDragging) return;
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+      dragStartX = e.clientX; dragStartY = e.clientY;
+      const speed = 0.003;
+      _deltaQuat.setFromAxisAngle(_rotYAxis, dx * speed);
+      orientationQuat.premultiply(_deltaQuat);
+      _deltaQuat.setFromAxisAngle(_rotXAxis, dy * speed);
+      orientationQuat.premultiply(_deltaQuat);
+    });
+    renderer.domElement.addEventListener('pointerup', e => {
+      isDragging = false;
+      const dt = performance.now() - dragStartTime;
+      const dx = e.clientX - (dragStartX - (e.movementX || 0));
+      if (dt < 300 && Math.abs(e.clientX - dragStartX) + Math.abs(e.clientY - dragStartY) < 6) {
+        handleClick(e);
+      }
+    });
+    renderer.domElement.addEventListener('wheel', e => {
+      e.preventDefault();
+      targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, targetZoom + e.deltaY * 1.5));
+    }, { passive: false });
+
+    // Touch support
+    let lastTouchDist = 0;
+    renderer.domElement.addEventListener('touchstart', e => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        lastTouchDist = Math.sqrt(dx*dx + dy*dy);
+      }
+    });
+    renderer.domElement.addEventListener('touchmove', e => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, targetZoom - (dist - lastTouchDist) * 3));
+        lastTouchDist = dist;
+      }
+    });
+
+    // Tooltip
+    const tooltipEl = document.getElementById('tooltip');
+    let hoveredMesh = null;
+
+    function showTooltip(data, x, y) {
+      let html = '';
+      if (data.type === 'sign') {
+        html = `<div class="tt-header">${data.signData.display}</div>
+          <div class="tt-row"><span class="tt-label">IPA</span><span class="tt-value">${data.signData.ipa}</span></div>
+          <div class="tt-row"><span class="tt-label">Class</span><span class="tt-value">${data.signData.cls}</span></div>`;
+      } else if (data.type === 'word') {
+        html = `<div class="tt-header">${data.wordData.display}</div>
+          <div class="tt-row"><span class="tt-label">IPA</span><span class="tt-value">${data.wordData.ipa}</span></div>
+          <div class="tt-row"><span class="tt-label">Frequency</span><span class="tt-value">${data.wordData.freq}</span></div>
+          <div class="tt-row"><span class="tt-label">Signs</span><span class="tt-value">${data.wordData.signs.join(', ')}</span></div>`;
+      } else if (data.type === 'inscription') {
+        html = `<div class="tt-header">${data.inscData.id.toUpperCase()}</div>
+          <div class="tt-row"><span class="tt-value" style="word-break:break-all">${data.inscData.text}</span></div>
+          <div class="tt-row"><span class="tt-label">Words</span><span class="tt-value">${data.inscData.words.length}</span></div>`;
+      } else if (data.isCandidate) {
+        const cand = PD.candidates.find(c => candidatePhyloIdx.get(c.id) === data.nodeIndex);
+        if (cand) {
+          html = `<div class="tt-header">${cand.id}</div>
+            <div class="tt-row"><span class="tt-label">Family</span><span class="tt-value">${cand.family}</span></div>
+            <div class="tt-row"><span class="tt-label">Branch</span><span class="tt-value">${cand.branch || 'isolate'}</span></div>
+            <div class="tt-row"><span class="tt-label">Tier</span><span class="tt-value">${cand.tier}</span></div>`;
+          if (cand.closeness !== null) {
+            const barW = Math.round(cand.closeness * 100);
+            html += `<div class="tt-row"><span class="tt-label">Closeness</span><span class="tt-value tt-gold">${cand.closeness.toFixed(4)}<span class="tt-bar" style="width:${barW}px"></span></span></div>
+              <div class="tt-row"><span class="tt-label">z-score</span><span class="tt-value">${cand.z_score.toFixed(2)}</span></div>
+              <div class="tt-row"><span class="tt-label">Bayes Factor</span><span class="tt-value">${cand.bayes_factor.toFixed(1)}</span></div>
+              <div class="tt-row"><span class="tt-label">Composite</span><span class="tt-value tt-gold">${cand.composite_score.toFixed(2)}</span></div>
+              <div class="tt-row"><span class="tt-label">Verdict</span><span class="tt-value">${cand.interpretation}</span></div>`;
+          } else {
+            html += `<div class="tt-row"><span class="tt-value" style="color:rgba(255,255,255,0.3)">Awaiting full run</span></div>`;
+          }
+        }
+      } else {
+        html = `<div class="tt-header">${data.langData.name}</div>
+          <div class="tt-row"><span class="tt-label">Family</span><span class="tt-value">${data.langData.family}</span></div>`;
+        if (data.langData.branch) html += `<div class="tt-row"><span class="tt-label">Branch</span><span class="tt-value">${data.langData.branch}</span></div>`;
+      }
+      tooltipEl.innerHTML = html;
+      tooltipEl.style.display = 'block';
+      const rect = tooltipEl.getBoundingClientRect();
+      let tx = x + 16, ty = y - 10;
+      if (tx + rect.width > window.innerWidth - 10) tx = x - rect.width - 16;
+      if (ty + rect.height > window.innerHeight - 10) ty = window.innerHeight - rect.height - 10;
+      if (ty < 10) ty = 10;
+      tooltipEl.style.left = tx + 'px';
+      tooltipEl.style.top = ty + 'px';
+    }
+    function hideTooltip() { tooltipEl.style.display = 'none'; }
+
+    function handleClick(e) {
+      raycaster.setFromCamera(new THREE.Vector2(mouse.x, mouse.y), camera);
+      // Check overlay nodes first
+      const allOverlay = [...signMeshes, ...wordMeshes, ...inscMeshes];
+      const overlayHits = raycaster.intersectObjects(allOverlay);
+      if (overlayHits.length > 0) {
+        showTooltip(overlayHits[0].object.userData, e.clientX, e.clientY);
+        return;
+      }
+      // Check phylo nodes
+      const phyloHits = raycaster.intersectObjects(phyloMeshes);
+      if (phyloHits.length > 0) {
+        showTooltip(phyloHits[0].object.userData, e.clientX, e.clientY);
+        return;
+      }
+      hideTooltip();
+    }
+
+    // Hover detection (throttled)
+    let lastRaycast = 0;
+    function updateHover(time) {
+      if (time - lastRaycast < 40) return;
+      lastRaycast = time;
+      raycaster.setFromCamera(new THREE.Vector2(mouse.x, mouse.y), camera);
+      const allInteractive = [...signMeshes, ...wordMeshes, ...inscMeshes, ...phyloMeshes.filter(m => m.userData.isCandidate)];
+      const hits = raycaster.intersectObjects(allInteractive);
+      const newHover = hits.length > 0 ? hits[0].object : null;
+      if (newHover !== hoveredMesh) {
+        if (hoveredMesh) {
+          hoveredMesh.scale.setScalar(hoveredMesh.userData.baseSize);
+        }
+        hoveredMesh = newHover;
+        if (hoveredMesh) {
+          hoveredMesh.scale.setScalar(hoveredMesh.userData.baseSize * 1.4);
+          renderer.domElement.style.cursor = 'pointer';
+        } else {
+          renderer.domElement.style.cursor = 'default';
+        }
+      }
+    }
+
+    // ================================================================
+    // MODE SYSTEM
+    // ================================================================
+    let currentMode = 'fullScan';
+    const modeBtns = document.querySelectorAll('.mode-btn');
+    modeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        modeBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentMode = btn.dataset.mode;
+        onModeChange();
+      });
+    });
+
+    // Vowel colors for vowel harmony mode
+    const VOWEL_COLORS = {
+      'a': new THREE.Color('#ff4444'),
+      'e': new THREE.Color('#ff8844'),
+      'i': new THREE.Color('#ffbb44'),
+      'o': new THREE.Color('#ff6688'),
+      'u': new THREE.Color('#ffe8cc'),
+    };
+
+    function getWordRootVowel(word) {
+      const vowels = word.ipa.split('').filter(c => 'aeiou'.includes(c));
+      return vowels.length > 0 ? vowels[0] : null;
+    }
+
+    function onModeChange() {
+      // Reset word colors
+      PD.words.forEach((w, i) => {
+        wordMeshes[i].material.color.copy(wordMeshes[i].userData.baseColor);
+      });
+
+      // Update stats display
+      const dynEl = document.getElementById('stats-dynamic');
+      const hypCard = document.getElementById('hypothesis-card');
+      hypCard.classList.remove('visible');
+
+      if (currentMode === 'topCandidates') {
+        const top3 = PD.candidates.filter(c => c.closeness !== null)
+          .sort((a, b) => b.composite_score - a.composite_score).slice(0, 3);
+        dynEl.innerHTML = '<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.06);padding-top:6px">' +
+          '<div class="stat-header">Top Candidates</div>' +
+          top3.map(c => `<div class="stat-row"><span class="stat-label">${c.id}</span><span class="stat-value gold">${c.composite_score.toFixed(2)}</span></div>`).join('') +
+          '</div>';
+      } else if (currentMode === 'vowelHarmony') {
+        const vh = PD.vowelHarmony;
+        dynEl.innerHTML = '<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.06);padding-top:6px">' +
+          '<div class="stat-header">Vowel Harmony</div>' +
+          `<div class="stat-row"><span class="stat-label">&chi;&sup2;</span><span class="stat-value">${vh.chi2.toFixed(1)}</span></div>` +
+          `<div class="stat-row"><span class="stat-label">p-value</span><span class="stat-value gold">${vh.p_value.toExponential(2)}</span></div>` +
+          `<div class="stat-row"><span class="stat-label">Cram&eacute;r's V</span><span class="stat-value">${vh.cramers_v.toFixed(3)}</span></div>` +
+          '</div>';
+        // Recolor words by root vowel
+        PD.words.forEach((w, i) => {
+          const rv = getWordRootVowel(w);
+          if (rv && VOWEL_COLORS[rv]) {
+            wordMeshes[i].material.color.copy(VOWEL_COLORS[rv]);
+          }
+        });
+      } else {
+        dynEl.innerHTML = '';
+      }
+    }
+
+    // ================================================================
+    // ANIMATION PHASE STATE MACHINE
+    // ================================================================
+    const clock = new THREE.Clock();
+    let globalElapsed = 0;
+    let animPhase = 'darkBirth';
+    let phaseTime = 0;
+
+    // Phase durations
+    const PHASE = {
+      darkBirth: 2,
+      signEmergence: 3,
+      wordBloom: 4,
+      inscriptionRing: 2,
+      phyloReveal: 4,
+      scanPulse: 5,
+      // Steady state cycle
+      steady: 12,
+      candidateSpotlight: 8,
+      vowelHarmonyPhase: 8,
+      hypothesisReveal: 12,
+      fullGlow: 8,
+      fadeTransition: 4,
+      rescan: 8,
+    };
+
+    // Track what's visible
+    let signsVisible = 0;       // 0-1 progress
+    let wordsVisible = 0;
+    let inscsVisible = 0;
+    let phyloVisible = 0;
+    let beamsVisible = 0;
+    let overlayEdgesVisible = 0;
+    let steadyCyclePhase = 'steady';
+    let steadyCycleTime = 0;
+    let spotlightIdx = 0;
+    let hypothesisIdx = 0;
+
+    // ================================================================
+    // ANIMATION LOOP
+    // ================================================================
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.05);
+      globalElapsed += dt;
+      phaseTime += dt;
+
+      const time = globalElapsed;
+
+      // Update hover
+      updateHover(time * 1000);
+
+      // ---- STARTUP ANIMATION ----
+      if (animPhase === 'darkBirth') {
+        signsVisible = 0; wordsVisible = 0; inscsVisible = 0; phyloVisible = 0; beamsVisible = 0; overlayEdgesVisible = 0;
+        if (phaseTime >= PHASE.darkBirth) { animPhase = 'signEmergence'; phaseTime = 0; }
+      }
+      else if (animPhase === 'signEmergence') {
+        signsVisible = Math.min(1, phaseTime / PHASE.signEmergence);
+        if (phaseTime >= PHASE.signEmergence) { animPhase = 'wordBloom'; phaseTime = 0; }
+      }
+      else if (animPhase === 'wordBloom') {
+        signsVisible = 1;
+        wordsVisible = Math.min(1, phaseTime / PHASE.wordBloom);
+        overlayEdgesVisible = wordsVisible * 0.5;
+        if (phaseTime >= PHASE.wordBloom) { animPhase = 'inscriptionRing'; phaseTime = 0; }
+      }
+      else if (animPhase === 'inscriptionRing') {
+        signsVisible = 1; wordsVisible = 1;
+        inscsVisible = Math.min(1, phaseTime / PHASE.inscriptionRing);
+        overlayEdgesVisible = 0.5 + inscsVisible * 0.2;
+        if (phaseTime >= PHASE.inscriptionRing) { animPhase = 'phyloReveal'; phaseTime = 0; }
+      }
+      else if (animPhase === 'phyloReveal') {
+        signsVisible = 1; wordsVisible = 1; inscsVisible = 1;
+        phyloVisible = Math.min(1, phaseTime / PHASE.phyloReveal);
+        overlayEdgesVisible = 0.7 + phyloVisible * 0.1;
+        if (phaseTime >= PHASE.phyloReveal) { animPhase = 'scanPulse'; phaseTime = 0; }
+      }
+      else if (animPhase === 'scanPulse') {
+        signsVisible = 1; wordsVisible = 1; inscsVisible = 1; phyloVisible = 1;
+        beamsVisible = Math.min(1, phaseTime / PHASE.scanPulse);
+        overlayEdgesVisible = 0.8 + beamsVisible * 0.2;
+        if (phaseTime >= PHASE.scanPulse) {
+          animPhase = 'steady';
+          phaseTime = 0;
+          steadyCyclePhase = 'steady';
+          steadyCycleTime = 0;
+        }
+      }
+      // ---- STEADY STATE CYCLE ----
+      else if (animPhase === 'steady') {
+        signsVisible = 1; wordsVisible = 1; inscsVisible = 1; phyloVisible = 1;
+        beamsVisible = 1; overlayEdgesVisible = 1;
+        steadyCycleTime += dt;
+
+        // Run steady-state sub-phases
+        if (steadyCyclePhase === 'steady') {
+          if (steadyCycleTime >= PHASE.steady) {
+            steadyCyclePhase = 'candidateSpotlight';
+            steadyCycleTime = 0;
+            // Pick candidate with results for spotlight
+            const withResults = PD.candidates.filter(c => c.closeness !== null);
+            spotlightIdx = spotlightIdx % withResults.length;
+          }
+        }
+        else if (steadyCyclePhase === 'candidateSpotlight') {
+          if (steadyCycleTime >= PHASE.candidateSpotlight) {
+            steadyCyclePhase = 'vowelHarmonyPhase';
+            steadyCycleTime = 0;
+            spotlightIdx++;
+          }
+        }
+        else if (steadyCyclePhase === 'vowelHarmonyPhase') {
+          if (steadyCycleTime >= PHASE.vowelHarmonyPhase) {
+            steadyCyclePhase = 'hypothesisReveal';
+            steadyCycleTime = 0;
+            hypothesisIdx = 0;
+          }
+        }
+        else if (steadyCyclePhase === 'hypothesisReveal') {
+          const perHyp = PHASE.hypothesisReveal / PD.hypotheses.length;
+          hypothesisIdx = Math.min(PD.hypotheses.length - 1, Math.floor(steadyCycleTime / perHyp));
+          if (steadyCycleTime >= PHASE.hypothesisReveal) {
+            steadyCyclePhase = 'fullGlow';
+            steadyCycleTime = 0;
+          }
+        }
+        else if (steadyCyclePhase === 'fullGlow') {
+          if (steadyCycleTime >= PHASE.fullGlow) {
+            steadyCyclePhase = 'steady';
+            steadyCycleTime = 0;
+          }
+        }
+      }
+
+      // ---- UPDATE HYPOTHESIS CARD ----
+      const hypCard = document.getElementById('hypothesis-card');
+      if (animPhase === 'steady' && steadyCyclePhase === 'hypothesisReveal' && currentMode === 'fullScan') {
+        const hyp = PD.hypotheses[hypothesisIdx];
+        document.getElementById('hyp-name').textContent = hyp.name;
+        document.getElementById('hyp-name').style.color = hyp.color;
+        document.getElementById('hyp-verdict').textContent = hyp.verdict;
+        document.getElementById('hyp-verdict').style.color = hyp.color;
+        document.getElementById('hyp-detail').textContent = hyp.detail;
+        hypCard.classList.add('visible');
+      } else {
+        hypCard.classList.remove('visible');
+      }
+
+      // ---- ROTATION ----
+      if (!isDragging) {
+        _deltaQuat.setFromAxisAngle(_rotYAxis, dt * 0.05);
+        orientationQuat.premultiply(_deltaQuat);
+      }
+      worldGroup.quaternion.copy(orientationQuat);
+      if (!isDragging) {
+        _deltaQuat.setFromAxisAngle(_rotXAxis, mouse.y * 0.001);
+        worldGroup.quaternion.multiply(_deltaQuat);
+      }
+      camera.position.z += (targetZoom - camera.position.z) * 0.06;
+      camera.lookAt(0, 0, 0);
+
+      // ---- UPDATE SHADER UNIFORMS ----
+      phyloEdgeMat.uniforms.uTime.value = time;
+      phyloEdgeMat.uniforms.uGlobalAlpha.value = phyloVisible;
+      overlayEdgeMat.uniforms.uTime.value = time;
+      overlayEdgeMat.uniforms.uGlobalAlpha.value = overlayEdgesVisible;
+
+      // ---- UPDATE SIGN NODES ----
+      const signRevealSmooth = signsVisible * signsVisible * (3 - 2 * signsVisible);
+      for (let i = 0; i < signMeshes.length; i++) {
+        const mesh = signMeshes[i];
+        const ud = mesh.userData;
+        // BFS wave: reveal signs based on index ordering
+        const signProgress = i / signMeshes.length;
+        const revealT = Math.max(0, Math.min(1, (signRevealSmooth - signProgress) * signMeshes.length * 0.15));
+        const targetOp = ud.targetOpacity * revealT;
+        ud.currentOpacity += (targetOp - ud.currentOpacity) * Math.min(1, dt * 5);
+        mesh.material.opacity = ud.currentOpacity;
+        // Pulse
+        const pulse = 1 + 0.06 * Math.sin(time * 1.5 + i * 0.8);
+        const growScale = 0.3 + 0.7 * revealT;
+        mesh.scale.setScalar(ud.baseSize * pulse * growScale);
+      }
+
+      // ---- UPDATE WORD NODES ----
+      for (let i = 0; i < wordMeshes.length; i++) {
+        const mesh = wordMeshes[i];
+        const ud = mesh.userData;
+        const wordProgress = i / wordMeshes.length;
+        const revealT = Math.max(0, Math.min(1, (wordsVisible - wordProgress) * wordMeshes.length * 0.08));
+
+        let targetOp = ud.targetOpacity * revealT;
+
+        // Mode-specific dimming
+        if (currentMode === 'topCandidates') targetOp *= 0.4;
+        if (currentMode === 'signExplorer') targetOp *= 0.3;
+
+        ud.currentOpacity += (targetOp - ud.currentOpacity) * Math.min(1, dt * 4);
+        mesh.material.opacity = ud.currentOpacity;
+        const pulse = 1 + 0.03 * Math.sin(time * 1.0 + i * 0.3);
+        mesh.scale.setScalar(ud.baseSize * pulse * (0.4 + 0.6 * revealT));
+      }
+
+      // ---- UPDATE INSCRIPTION NODES ----
+      for (let i = 0; i < inscMeshes.length; i++) {
+        const mesh = inscMeshes[i];
+        const ud = mesh.userData;
+        const inscProgress = i / inscMeshes.length;
+        const revealT = Math.max(0, Math.min(1, (inscsVisible - inscProgress) * inscMeshes.length * 0.1));
+        let targetOp = ud.targetOpacity * revealT;
+        if (currentMode !== 'inscriptions' && currentMode !== 'fullScan') targetOp *= 0.15;
+        ud.currentOpacity += (targetOp - ud.currentOpacity) * Math.min(1, dt * 4);
+        mesh.material.opacity = ud.currentOpacity;
+        mesh.scale.setScalar(ud.baseSize * (0.5 + 0.5 * revealT));
+      }
+
+      // ---- UPDATE PHYLO NODES ----
+      for (let i = 0; i < NODE_COUNT; i++) {
+        const mesh = phyloMeshes[i];
+        const ud = mesh.userData;
+        let targetOp;
+
+        if (ud.isCandidate) {
+          const cand = PD.candidates.find(c => candidatePhyloIdx.get(c.id) === i);
+          const hasResults = cand && cand.closeness !== null;
+
+          if (currentMode === 'topCandidates' && !hasResults) {
+            targetOp = 0.15 * phyloVisible;
+          } else if (currentMode === 'families') {
+            targetOp = 0.8 * phyloVisible;
+          } else {
+            targetOp = ud.targetOpacity * phyloVisible;
+          }
+
+          // Spotlight boost
+          if (animPhase === 'steady' && steadyCyclePhase === 'candidateSpotlight') {
+            const withResults = PD.candidates.filter(c => c.closeness !== null);
+            const spotCand = withResults[spotlightIdx % withResults.length];
+            if (cand && cand.id === spotCand.id) {
+              targetOp = Math.min(1, targetOp * 1.5);
+            }
+          }
+        } else {
+          targetOp = ud.targetOpacity * phyloVisible;
+          // Extra dimming in some modes
+          if (currentMode === 'signExplorer' || currentMode === 'inscriptions') {
+            targetOp *= 0.3;
+          }
+        }
+
+        ud.currentOpacity += (targetOp - ud.currentOpacity) * Math.min(1, dt * 3);
+        mesh.material.opacity = ud.currentOpacity;
+
+        // Candidate pulse
+        if (ud.isCandidate) {
+          const pulse = 1 + 0.08 * Math.sin(time * 1.2 + i * 0.7);
+          mesh.scale.setScalar(ud.baseSize * pulse);
+        }
+
+        mesh.position.copy(phyloNodes[i].position);
+      }
+
+      // ---- RENDER ----
+      composer.render();
+    }
+
+    animate();
+
+    // ================================================================
+    // RESIZE HANDLER
+    // ================================================================
+    window.addEventListener('resize', () => {
+      const w = window.innerWidth, h = window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      composer.setSize(w, h);
+      bloomPass.resolution.set(w, h);
+    });
+
+    console.log('PhaiPhon loaded. Signs:', PD.signs.length, 'Words:', PD.words.length,
+      'Inscriptions:', PD.inscriptions.length, 'Candidates:', PD.candidates.length);
+  </script>
+</body>
+</html>

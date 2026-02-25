@@ -364,6 +364,91 @@
       }
     }
 
+    /* Burger menu */
+    #burger-menu {
+      position: fixed;
+      top: 20px;
+      right: 70px;
+      z-index: 150;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(5, 5, 7, 0.30);
+      backdrop-filter: blur(24px) saturate(1.2);
+      -webkit-backdrop-filter: blur(24px) saturate(1.2);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 0;
+      transition: background 0.2s, border-color 0.2s, opacity 0.3s;
+      opacity: 0.6;
+    }
+    #burger-menu:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.15);
+      opacity: 1;
+    }
+    #burger-menu .burger-line {
+      width: 16px;
+      height: 1.5px;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 1px;
+      transition: background 0.2s;
+    }
+    #burger-menu:hover .burger-line {
+      background: rgba(255, 255, 255, 0.8);
+    }
+    #burger-dropdown {
+      position: fixed;
+      top: 68px;
+      right: 52px;
+      z-index: 151;
+      background: rgba(5, 5, 7, 0.40);
+      backdrop-filter: blur(24px) saturate(1.2);
+      -webkit-backdrop-filter: blur(24px) saturate(1.2);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 6px 0;
+      min-width: 160px;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
+      opacity: 0;
+      transform: translateY(-8px);
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    #burger-dropdown.open {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    #burger-dropdown a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px;
+      color: rgba(255, 255, 255, 0.6);
+      text-decoration: none;
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 12.5px;
+      letter-spacing: 1px;
+      transition: color 0.15s, background 0.15s;
+    }
+    #burger-dropdown a:hover {
+      color: rgba(255, 200, 120, 0.9);
+      background: rgba(255, 200, 120, 0.06);
+    }
+    #burger-dropdown a .menu-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 180, 70, 0.6);
+      flex-shrink: 0;
+    }
+
     /* Search toggle button */
     #search-toggle {
       position: fixed;
@@ -682,6 +767,16 @@
         width: 36px;
         height: 36px;
       }
+      #burger-menu {
+        top: 12px;
+        right: 56px;
+        width: 36px;
+        height: 36px;
+      }
+      #burger-dropdown {
+        top: 56px;
+        right: 40px;
+      }
     }
   </style>
 </head>
@@ -728,6 +823,15 @@
 
   <div id="tooltip"></div>
   <div id="leader-labels"></div>
+
+  <div id="burger-menu" title="Menu" onclick="document.getElementById('burger-dropdown').classList.toggle('open')">
+    <div class="burger-line"></div>
+    <div class="burger-line"></div>
+    <div class="burger-line"></div>
+  </div>
+  <div id="burger-dropdown">
+    <a href="phaiphon/index.html"><span class="menu-dot"></span>PhaiPhon</a>
+  </div>
 
   <button id="search-toggle" title="Search languages (Ctrl+K)">
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
@@ -825,6 +929,15 @@
       window._startTypewriter = function() { if (!started) { started = true; type(); } };
       setTimeout(window._startTypewriter, 800);
     })();
+
+    // Burger dropdown: close on click outside
+    document.addEventListener('click', function(e) {
+      const dd = document.getElementById('burger-dropdown');
+      const btn = document.getElementById('burger-menu');
+      if (!dd.contains(e.target) && !btn.contains(e.target)) {
+        dd.classList.remove('open');
+      }
+    });
   </script>
   <script src="language_data.js"></script>
   <script type="importmap">
