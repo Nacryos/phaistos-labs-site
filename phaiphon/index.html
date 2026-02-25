@@ -848,10 +848,10 @@
     const signMeshes = [];
     const signGeo = new THREE.SphereGeometry(1, 16, 16);
     PD.signs.forEach((sign, i) => {
-      const size = sign.cls === 'undeciphered' ? 10 : (sign.cls === 'vowel' ? 14 : 10);
+      const size = sign.cls === 'undeciphered' ? 12 : (sign.cls === 'vowel' ? 16 : 12);
       const color = sign.cls === 'undeciphered'
-        ? new THREE.Color('#BB9933')
-        : new THREE.Color('#FFD080');
+        ? new THREE.Color('#DDBB55')
+        : new THREE.Color('#FFE0A0');
       const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0 });
       const mesh = new THREE.Mesh(signGeo, mat);
       mesh.position.copy(signPositions[i]);
