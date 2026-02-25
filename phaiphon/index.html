@@ -56,7 +56,7 @@
       font-weight: 600;
       letter-spacing: 3px;
       text-transform: uppercase;
-      color: rgba(255, 180, 70, 0.7);
+      color: rgba(255, 255, 255, 0.8);
     }
     #title-overlay .subtitle {
       font-size: 11px;
@@ -82,7 +82,7 @@
       backdrop-filter: blur(24px) saturate(1.2);
       -webkit-backdrop-filter: blur(24px) saturate(1.2);
       border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 4px;
+      border-radius: 0;
       padding: 8px 14px;
       color: rgba(255, 255, 255, 0.35);
       font-family: 'Courier New', 'Consolas', monospace;
@@ -100,9 +100,9 @@
       background: rgba(255, 255, 255, 0.04);
     }
     .mode-btn.active {
-      color: rgba(255, 180, 70, 0.85);
-      border-color: rgba(255, 180, 70, 0.2);
-      background: rgba(255, 180, 70, 0.06);
+      color: rgba(255, 255, 255, 0.9);
+      border-color: rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.06);
     }
 
     /* Stats overlay (bottom-right) */
@@ -115,7 +115,7 @@
       backdrop-filter: blur(24px) saturate(1.2);
       -webkit-backdrop-filter: blur(24px) saturate(1.2);
       border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 5px;
+      border-radius: 0;
       padding: 14px 18px;
       font-family: 'Courier New', 'Consolas', monospace;
       font-size: 11px;
@@ -127,7 +127,7 @@
       transition: opacity 0.5s;
     }
     .stat-header {
-      color: rgba(255, 180, 70, 0.7);
+      color: rgba(255, 255, 255, 0.45);
       font-size: 10px;
       letter-spacing: 2px;
       text-transform: uppercase;
@@ -142,7 +142,7 @@
     }
     .stat-label { color: rgba(255, 255, 255, 0.3); }
     .stat-value { color: rgba(255, 255, 255, 0.65); text-align: right; }
-    .stat-value.gold { color: rgba(255, 180, 70, 0.8); }
+    .stat-value.gold { color: rgba(255, 255, 255, 0.8); }
 
     /* Hypothesis card */
     #hypothesis-card {
@@ -155,7 +155,7 @@
       backdrop-filter: blur(24px) saturate(1.2);
       -webkit-backdrop-filter: blur(24px) saturate(1.2);
       border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 6px;
+      border-radius: 0;
       padding: 16px 24px;
       font-family: 'Courier New', 'Consolas', monospace;
       font-size: 12px;
@@ -194,7 +194,7 @@
       backdrop-filter: blur(24px) saturate(1.2);
       -webkit-backdrop-filter: blur(24px) saturate(1.2);
       border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 5px;
+      border-radius: 0;
       padding: 14px 18px;
       color: #ccc;
       font-family: 'Courier New', 'Consolas', monospace;
@@ -219,12 +219,12 @@
     .tt-row { display: flex; gap: 10px; }
     .tt-label { color: rgba(255,255,255,0.3); min-width: 80px; flex-shrink: 0; }
     .tt-value { color: rgba(255,255,255,0.7); }
-    .tt-gold { color: rgba(255, 180, 70, 0.8); }
+    .tt-gold { color: rgba(255, 255, 255, 0.85); }
     .tt-bar {
       display: inline-block;
       height: 4px;
-      border-radius: 2px;
-      background: rgba(255, 180, 70, 0.6);
+      border-radius: 0;
+      background: rgba(255, 255, 255, 0.5);
       vertical-align: middle;
       margin-left: 6px;
     }
@@ -1409,9 +1409,9 @@
       if (animPhase === 'steady' && steadyCyclePhase === 'hypothesisReveal' && currentMode === 'fullScan') {
         const hyp = PD.hypotheses[hypothesisIdx];
         document.getElementById('hyp-name').textContent = hyp.name;
-        document.getElementById('hyp-name').style.color = hyp.color;
+        document.getElementById('hyp-name').style.color = 'rgba(255, 255, 255, 0.5)';
         document.getElementById('hyp-verdict').textContent = hyp.verdict;
-        document.getElementById('hyp-verdict').style.color = hyp.color;
+        document.getElementById('hyp-verdict').style.color = 'rgba(255, 255, 255, 0.9)';
         document.getElementById('hyp-detail').textContent = hyp.detail;
         hypCard.classList.add('visible');
       } else {
