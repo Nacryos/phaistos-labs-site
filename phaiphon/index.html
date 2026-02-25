@@ -780,8 +780,13 @@
         vProximity = aProximity;
         // BFS wavefront reveal: light courses from candidates outward
         float revealProgress = uWaveFront - aNodeDist;
-        // Edges only reveal via BFS wave — no ambient fade for edges
-        vReveal = smoothstep(-0.08, 0.20, revealProgress);
+        // Edges: BFS wave gated by proximity — only related branches light up
+        float waveReveal = smoothstep(-0.08, 0.20, revealProgress);
+        float proxGate = smoothstep(0.0, 0.03, aProximity);
+        float proxGated = waveReveal * proxGate;
+        // Smooth transition to ungated in steady state (uWaveFront > 1.2)
+        float steadyBlend = smoothstep(1.2, 1.6, uWaveFront);
+        vReveal = mix(proxGated, 1.0, steadyBlend);
         vWavefrontGlow = exp(-revealProgress * revealProgress * 40.0) * smoothstep(-0.1, 0.02, revealProgress);
         // Directional fiber pulse: flows from progress=0 (candidate end) outward
         float fiberPos = fract(uTime * aFiberSpeed + aPhaseOffset);
@@ -1365,7 +1370,8 @@
         if (phaseTime >= PHASE.phyloReveal) { animPhase = 'scanPulse'; phaseTime = 0; phyloWaveFront = 2.0; }
       }
       else if (animPhase === 'scanPulse') {
-        signsVisible = 1; wordsVisible = 1; inscsVisible = 1; phyloVisible = 1; phyloWaveFront = 2.0;
+        signsVisible = 1; wordsVisible = 1; inscsVisible = 1; phyloVisible = 1;
+        phyloWaveFront = 1.15 + (phaseTime / PHASE.scanPulse) * 0.85;
         beamsVisible = Math.min(1, phaseTime / PHASE.scanPulse);
         overlayEdgesVisible = 0.8 + beamsVisible * 0.2;
         if (phaseTime >= PHASE.scanPulse) {
