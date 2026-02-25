@@ -944,6 +944,7 @@
     `;
     const phyloEdgeFS = `
       uniform float uTime;
+      uniform float uModeDim;
       varying float vFiberAlpha;
       varying float vGlobalAlpha;
       varying float vProximity;
@@ -962,6 +963,8 @@
         color = mix(color, vec3(1.0, 0.95, 0.85), vFiberAlpha * p * 0.9);
         // Warm white at wavefront
         color = mix(color, vec3(1.0, 0.97, 0.90), vWavefrontGlow * 0.6);
+        alpha *= (1.0 - uModeDim);
+        color *= (1.0 - uModeDim);
         if (alpha < 0.001) discard;
         gl_FragColor = vec4(color, alpha);
       }
@@ -1016,7 +1019,7 @@
     const phyloEdgeMat = new THREE.ShaderMaterial({
       vertexShader: phyloEdgeVS, fragmentShader: phyloEdgeFS,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-      uniforms: { uTime: { value: 0 }, uGlobalAlpha: { value: 0 }, uWaveFront: { value: 0 } },
+      uniforms: { uTime: { value: 0 }, uGlobalAlpha: { value: 0 }, uWaveFront: { value: 0 }, uModeDim: { value: 0 } },
     });
     const phyloEdgeMesh = new THREE.LineSegments(phyloEdgeGeo, phyloEdgeMat);
     worldGroup.add(phyloEdgeMesh);
@@ -1031,6 +1034,7 @@
       attribute float aEdgeType;
       attribute float aWeight;
       attribute vec3 aColor;
+      attribute float aModeDim;
       uniform float uTime;
       uniform float uGlobalAlpha;
       varying float vFiberAlpha;
@@ -1038,11 +1042,13 @@
       varying float vEdgeType;
       varying float vWeight;
       varying vec3 vColor;
+      varying float vModeDim;
       void main() {
         vGlobalAlpha = uGlobalAlpha;
         vEdgeType = aEdgeType;
         vWeight = aWeight;
         vColor = aColor;
+        vModeDim = aModeDim;
         float fiberPos1 = fract(uTime * aFiberSpeed + aPhaseOffset);
         float fiberPos2 = fract(uTime * aFiberSpeed + aPhaseOffset + 0.5);
         float d1 = abs(aEdgeProgress - fiberPos1);
@@ -1059,6 +1065,7 @@
       varying float vEdgeType;
       varying float vWeight;
       varying vec3 vColor;
+      varying float vModeDim;
       void main() {
         float alpha;
         vec3 color = vColor;
@@ -1075,6 +1082,9 @@
           // Inscription → word links: very dim
           alpha = 0.10 * vGlobalAlpha;
         }
+        float modeKeep = 1.0 - vModeDim;
+        alpha *= modeKeep;
+        color *= modeKeep;
         if (alpha < 0.001) discard;
         gl_FragColor = vec4(color, alpha);
       }
@@ -1113,10 +1123,12 @@
 
     // Closeness beams (center → candidate phylo positions)
     const beamStartIdx = oePos.length / 6; // vertex pair index for beam start
+    const beamCandidateMap = []; // maps beam index to candidate id
     const center = new THREE.Vector3(0, 0, 0);
     PD.candidates.forEach(c => {
       const idx = candidatePhyloIdx.get(c.id);
       if (idx === undefined) return;
+      beamCandidateMap.push(c.id);
       const target = phyloNodes[idx].position;
       const score = c.closeness || 0.15;
       const speed = 0.15 + (c.z_score_uncalibrated || 5) * 0.008;
@@ -1138,6 +1150,8 @@
         oeCol.push(beamColor.r, beamColor.g, beamColor.b, beamColor.r, beamColor.g, beamColor.b);
       }
     });
+
+    const inscEdgeStartIdx = oePos.length / 6; // vertex pair index where inscription edges start
 
     // Inscription → Word edges
     PD.inscriptions.forEach((insc, ii) => {
@@ -1170,6 +1184,11 @@
     overlayEdgeGeo.setAttribute('aEdgeType', new THREE.Float32BufferAttribute(oeType, 1));
     overlayEdgeGeo.setAttribute('aWeight', new THREE.Float32BufferAttribute(oeWeight, 1));
     overlayEdgeGeo.setAttribute('aColor', new THREE.Float32BufferAttribute(oeCol, 3));
+    const overlayModeDimArr = new Float32Array(oePos.length / 3);
+    overlayEdgeGeo.setAttribute('aModeDim', new THREE.Float32BufferAttribute(overlayModeDimArr, 1));
+    let currentOverlayDimTargets = null;
+    let targetPhyloModeDim = 0;
+    let cachedTop3Set = null;
     const overlayEdgeMat = new THREE.ShaderMaterial({
       vertexShader: overlayEdgeVS, fragmentShader: overlayEdgeFS,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
@@ -1402,6 +1421,7 @@
       if (currentMode === 'topCandidates') {
         const top3 = PD.candidates.filter(c => c.closeness !== null)
           .sort((a, b) => b.closeness - a.closeness).slice(0, 3);
+        cachedTop3Set = new Set(top3.map(c => c.id));
         dynEl.innerHTML = '<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.06);padding-top:6px">' +
           '<div class="stat-header">Top by Closeness*</div>' +
           top3.map(c => `<div class="stat-row"><span class="stat-label">${c.id}</span><span class="stat-value gold">${c.closeness.toFixed(3)}</span></div>`).join('') +
@@ -1425,6 +1445,62 @@
       } else {
         dynEl.innerHTML = '';
       }
+
+      updateOverlayModeDim();
+    }
+
+    function computeModeDimTargets() {
+      const totalVerts = overlayModeDimArr.length;
+      const result = new Float32Array(totalVerts);
+      const beamStartVert = beamStartIdx * 2;
+      const inscStartVert = inscEdgeStartIdx * 2;
+      let phyloDim = 0;
+
+      if (currentMode === 'fullScan') {
+        result.fill(0.0);
+        phyloDim = 0;
+      } else if (currentMode === 'topCandidates') {
+        result.fill(0.97);
+        for (let v = 0; v < beamStartVert && v < totalVerts; v++) result[v] = 0.0;
+        if (cachedTop3Set) {
+          for (let bi = 0; bi < beamCandidateMap.length; bi++) {
+            if (cachedTop3Set.has(beamCandidateMap[bi])) {
+              const startV = beamStartVert + bi * SEGMENTS * 2;
+              for (let v = startV; v < startV + SEGMENTS * 2 && v < totalVerts; v++) {
+                result[v] = 0.0;
+              }
+            }
+          }
+        }
+        phyloDim = 0.97;
+      } else if (currentMode === 'families') {
+        result.fill(0.95);
+        for (let v = beamStartVert; v < inscStartVert && v < totalVerts; v++) {
+          result[v] = 0.0;
+        }
+        phyloDim = 0.95;
+      } else if (currentMode === 'vowelHarmony') {
+        result.fill(0.97);
+        for (let v = 0; v < beamStartVert && v < totalVerts; v++) result[v] = 0.0;
+        phyloDim = 0.97;
+      } else if (currentMode === 'signExplorer') {
+        result.fill(0.98);
+        for (let v = 0; v < beamStartVert && v < totalVerts; v++) result[v] = 0.0;
+        phyloDim = 0.98;
+      } else if (currentMode === 'inscriptions') {
+        result.fill(0.98);
+        for (let v = 0; v < beamStartVert && v < totalVerts; v++) result[v] = 0.0;
+        for (let v = inscStartVert; v < totalVerts; v++) result[v] = 0.0;
+        phyloDim = 0.98;
+      }
+
+      return { overlayDimArray: result, phyloModeDim: phyloDim };
+    }
+
+    function updateOverlayModeDim() {
+      const { overlayDimArray, phyloModeDim } = computeModeDimTargets();
+      currentOverlayDimTargets = overlayDimArray;
+      targetPhyloModeDim = phyloModeDim;
     }
 
     // ================================================================
@@ -1610,21 +1686,48 @@
       overlayEdgeMat.uniforms.uTime.value = time;
       overlayEdgeMat.uniforms.uGlobalAlpha.value = overlayEdgesVisible;
 
+      // ---- LERP OVERLAY EDGE MODE DIM ----
+      if (currentOverlayDimTargets) {
+        const modeDimAttr = overlayEdgeGeo.getAttribute('aModeDim');
+        const arr = modeDimAttr.array;
+        let changed = false;
+        const lerpSpeed = Math.min(1, dt * 4);
+        for (let v = 0; v < arr.length; v++) {
+          const target = currentOverlayDimTargets[v];
+          if (Math.abs(arr[v] - target) > 0.001) {
+            arr[v] += (target - arr[v]) * lerpSpeed;
+            changed = true;
+          }
+        }
+        if (changed) modeDimAttr.needsUpdate = true;
+      }
+      // Lerp phylo mode dim
+      {
+        const current = phyloEdgeMat.uniforms.uModeDim.value;
+        const diff = targetPhyloModeDim - current;
+        if (Math.abs(diff) > 0.001) {
+          phyloEdgeMat.uniforms.uModeDim.value += diff * Math.min(1, dt * 4);
+        }
+      }
+
       // ---- UPDATE SIGN NODES ----
       const signRevealSmooth = signsVisible * signsVisible * (3 - 2 * signsVisible);
       for (let i = 0; i < signMeshes.length; i++) {
         const mesh = signMeshes[i];
         const ud = mesh.userData;
-        // BFS wave: reveal signs based on index ordering
         const signProgress = i / signMeshes.length;
         const revealT = Math.max(0, Math.min(1, (signRevealSmooth - signProgress) * signMeshes.length * 0.15));
-        const targetOp = ud.targetOpacity * revealT;
+        let modeOpMul = 1.0, modeScaleMul = 1.0;
+        if (currentMode === 'topCandidates') { modeOpMul = 0.4; modeScaleMul = 0.7; }
+        else if (currentMode === 'families') { modeOpMul = 0.3; modeScaleMul = 0.6; }
+        else if (currentMode === 'signExplorer') { modeOpMul = 1.0; modeScaleMul = 1.5; }
+        else if (currentMode === 'inscriptions') { modeOpMul = 0.12; modeScaleMul = 0.6; }
+        const targetOp = ud.targetOpacity * revealT * modeOpMul;
         ud.currentOpacity += (targetOp - ud.currentOpacity) * Math.min(1, dt * 5);
         mesh.material.opacity = ud.currentOpacity;
-        // Pulse
         const pulse = 1 + 0.06 * Math.sin(time * 1.5 + i * 0.8);
         const growScale = 0.3 + 0.7 * revealT;
-        mesh.scale.setScalar(ud.baseSize * pulse * growScale);
+        mesh.scale.setScalar(ud.baseSize * pulse * growScale * modeScaleMul);
       }
 
       // ---- UPDATE WORD NODES ----
@@ -1634,16 +1737,18 @@
         const wordProgress = i / wordMeshes.length;
         const revealT = Math.max(0, Math.min(1, (wordsVisible - wordProgress) * wordMeshes.length * 0.08));
 
-        let targetOp = ud.targetOpacity * revealT;
+        let modeOpMul = 1.0, modeScaleMul = 1.0;
+        if (currentMode === 'topCandidates') { modeOpMul = 0.04; modeScaleMul = 0.5; }
+        else if (currentMode === 'families') { modeOpMul = 0.07; modeScaleMul = 0.5; }
+        else if (currentMode === 'signExplorer') { modeOpMul = 0.07; modeScaleMul = 0.5; }
+        else if (currentMode === 'inscriptions') { modeOpMul = 0.5; modeScaleMul = 0.8; }
 
-        // Mode-specific dimming
-        if (currentMode === 'topCandidates') targetOp *= 0.4;
-        if (currentMode === 'signExplorer') targetOp *= 0.3;
+        let targetOp = ud.targetOpacity * revealT * modeOpMul;
 
         ud.currentOpacity += (targetOp - ud.currentOpacity) * Math.min(1, dt * 4);
         mesh.material.opacity = ud.currentOpacity;
         const pulse = 1 + 0.03 * Math.sin(time * 1.0 + i * 0.3);
-        mesh.scale.setScalar(ud.baseSize * pulse * (0.4 + 0.6 * revealT));
+        mesh.scale.setScalar(ud.baseSize * pulse * (0.4 + 0.6 * revealT) * modeScaleMul);
       }
 
       // ---- UPDATE INSCRIPTION NODES ----
@@ -1652,11 +1757,16 @@
         const ud = mesh.userData;
         const inscProgress = i / inscMeshes.length;
         const revealT = Math.max(0, Math.min(1, (inscsVisible - inscProgress) * inscMeshes.length * 0.1));
-        let targetOp = ud.targetOpacity * revealT;
-        if (currentMode !== 'inscriptions' && currentMode !== 'fullScan') targetOp *= 0.15;
+        let modeOpMul = 1.0, modeScaleMul = 1.0;
+        if (currentMode === 'topCandidates') { modeOpMul = 0.05; modeScaleMul = 0.5; }
+        else if (currentMode === 'families') { modeOpMul = 0.04; modeScaleMul = 0.4; }
+        else if (currentMode === 'vowelHarmony') { modeOpMul = 0.07; modeScaleMul = 0.5; }
+        else if (currentMode === 'signExplorer') { modeOpMul = 0.04; modeScaleMul = 0.4; }
+        else if (currentMode === 'inscriptions') { modeOpMul = 1.0; modeScaleMul = 1.3; }
+        let targetOp = ud.targetOpacity * revealT * modeOpMul;
         ud.currentOpacity += (targetOp - ud.currentOpacity) * Math.min(1, dt * 4);
         mesh.material.opacity = ud.currentOpacity;
-        mesh.scale.setScalar(ud.baseSize * (0.5 + 0.5 * revealT));
+        mesh.scale.setScalar(ud.baseSize * (0.5 + 0.5 * revealT) * modeScaleMul);
       }
 
       // ---- UPDATE PHYLO NODES ----
@@ -1664,21 +1774,40 @@
         const mesh = phyloMeshes[i];
         const ud = mesh.userData;
         let targetOp;
+        let modeScaleMul = 1.0;
 
         if (ud.isCandidate) {
           const cand = PD.candidates.find(c => candidatePhyloIdx.get(c.id) === i);
-          const hasResults = cand && cand.closeness !== null;
+          const isTop3 = cachedTop3Set && cand && cachedTop3Set.has(cand.id);
 
-          if (currentMode === 'topCandidates' && !hasResults) {
-            targetOp = 0.15 * phyloVisible;
+          if (currentMode === 'fullScan') {
+            targetOp = ud.targetOpacity * phyloVisible;
+          } else if (currentMode === 'topCandidates') {
+            if (isTop3) {
+              targetOp = 0.95 * phyloVisible;
+              modeScaleMul = 1.3;
+            } else {
+              targetOp = 0.03 * phyloVisible;
+              modeScaleMul = 0.5;
+            }
           } else if (currentMode === 'families') {
-            targetOp = 0.8 * phyloVisible;
+            targetOp = 0.85 * phyloVisible;
+            modeScaleMul = 1.15;
+          } else if (currentMode === 'vowelHarmony') {
+            targetOp = 0.03 * phyloVisible;
+            modeScaleMul = 0.5;
+          } else if (currentMode === 'signExplorer') {
+            targetOp = 0.02 * phyloVisible;
+            modeScaleMul = 0.5;
+          } else if (currentMode === 'inscriptions') {
+            targetOp = 0.03 * phyloVisible;
+            modeScaleMul = 0.5;
           } else {
             targetOp = ud.targetOpacity * phyloVisible;
           }
 
-          // Spotlight boost
-          if (animPhase === 'steady' && steadyCyclePhase === 'candidateSpotlight') {
+          // Spotlight boost (only in fullScan during auto-cycle)
+          if (currentMode === 'fullScan' && animPhase === 'steady' && steadyCyclePhase === 'candidateSpotlight') {
             const withResults = PD.candidates.filter(c => c.closeness !== null);
             const spotCand = withResults[spotlightIdx % withResults.length];
             if (cand && cand.id === spotCand.id) {
@@ -1686,10 +1815,11 @@
             }
           }
         } else {
-          targetOp = ud.targetOpacity * phyloVisible;
-          // Extra dimming in some modes
-          if (currentMode === 'signExplorer' || currentMode === 'inscriptions') {
-            targetOp *= 0.3;
+          if (currentMode === 'fullScan') {
+            targetOp = ud.targetOpacity * phyloVisible;
+          } else {
+            targetOp = 0.02 * phyloVisible;
+            modeScaleMul = 0.5;
           }
         }
 
@@ -1699,11 +1829,9 @@
           const ndist = nodeDist[i] / MAX_DIST;
           const rp = phyloWaveFront - ndist;
           const waveReveal = Math.max(0, Math.min(1, rp * 4));
-          // Ambient node glow: starts very early (5% through), fast ramp, no edges
           const timeT = Math.max(0, Math.min(1, (phyloWaveFront / 1.15 - 0.05) / 0.6));
           const ambientReveal = timeT * timeT;
           targetOp *= Math.max(waveReveal, ambientReveal);
-          // Wavefront glow only on BFS wave frontier
           wfGlow = rp > -0.1 ? Math.exp(-rp * rp * 40) : 0;
         }
 
@@ -1716,10 +1844,12 @@
           mesh.material.color.lerp(COLOR_WAVEFRONT, wfGlow * 0.4);
         }
 
-        // Candidate pulse
+        // Candidate pulse + mode scale
         if (ud.isCandidate) {
           const pulse = 1 + 0.08 * Math.sin(time * 1.2 + i * 0.7);
-          mesh.scale.setScalar(ud.baseSize * pulse);
+          mesh.scale.setScalar(ud.baseSize * pulse * modeScaleMul);
+        } else {
+          mesh.scale.setScalar(ud.baseSize * modeScaleMul);
         }
 
         mesh.position.copy(phyloNodes[i].position);
