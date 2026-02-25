@@ -620,6 +620,38 @@
       if (idx !== undefined) candidateNodeSet.add(idx);
     });
 
+    // ================================================================
+    // COMPUTE PROXIMITY TO CANDIDATE LANGUAGES (BFS from each candidate)
+    // ================================================================
+    const MAX_DIST = 20;
+    const nodeProximity = new Float32Array(NODE_COUNT);
+    nodeProximity.fill(0);
+    const nodeDist = new Int32Array(NODE_COUNT);
+    nodeDist.fill(MAX_DIST + 1);
+    const bfsQueue = [];
+    for (const idx of candidateNodeSet) {
+      nodeDist[idx] = 0;
+      nodeProximity[idx] = 1.0;
+      bfsQueue.push(idx);
+    }
+    let qi = 0;
+    while (qi < bfsQueue.length) {
+      const cur = bfsQueue[qi++];
+      const curDist = nodeDist[cur];
+      if (curDist >= MAX_DIST) continue;
+      for (const ei of adjacency[cur]) {
+        const e = phyloEdges[ei];
+        const neighbor = e.sourceIdx === cur ? e.targetIdx : e.sourceIdx;
+        if (curDist + 1 < nodeDist[neighbor]) {
+          nodeDist[neighbor] = curDist + 1;
+          nodeProximity[neighbor] = Math.pow(1 - (curDist + 1) / (MAX_DIST + 1), 2.0);
+          bfsQueue.push(neighbor);
+        }
+      }
+    }
+    console.log('Proximity computed. Candidates:', candidateNodeSet.size,
+      'Nodes within 5 hops:', Array.from(nodeDist).filter(d => d <= 5).length);
+
     for (let i = 0; i < NODE_COUNT; i++) {
       const node = phyloNodes[i];
       const isCandidate = candidateNodeSet.has(i);
@@ -635,9 +667,10 @@
         baseColor.lerp(COLOR_CREAM, 0.3);
         baseColor.multiplyScalar(1.2);
       } else {
-        size = 2;
+        const prox = nodeProximity[i];
+        size = 2 + prox * 4; // bigger near candidates
         opacity = 0;
-        baseColor.multiplyScalar(0.4);
+        baseColor.multiplyScalar(0.25 + prox * 0.55);
       }
 
       const mat = new THREE.MeshBasicMaterial({ color: baseColor, transparent: true, opacity: 0 });
@@ -647,7 +680,7 @@
       mesh.userData = {
         baseSize: size,
         baseColor: baseColor.clone(),
-        targetOpacity: isCandidate ? 0.9 : 0.12,
+        targetOpacity: isCandidate ? 0.9 : (0.06 + nodeProximity[i] * 0.35),
         currentOpacity: 0,
         isCandidate,
         nodeIndex: i,
@@ -721,22 +754,25 @@
     });
 
     // ================================================================
-    // EDGES — Background phylogenetic (dim)
+    // EDGES — Background phylogenetic (proximity-graded brightness)
     // ================================================================
     const SEGMENTS = 8;
     const phyloEdgeVS = `
       attribute float aPhaseOffset;
       attribute float aFiberSpeed;
       attribute float aEdgeProgress;
+      attribute float aProximity;
       uniform float uTime;
       uniform float uGlobalAlpha;
       varying float vFiberAlpha;
       varying float vGlobalAlpha;
+      varying float vProximity;
       varying vec3 vColor;
       attribute vec3 aColor;
       void main() {
         vGlobalAlpha = uGlobalAlpha;
         vColor = aColor;
+        vProximity = aProximity;
         float fiberPos = fract(uTime * aFiberSpeed + aPhaseOffset);
         float d = abs(aEdgeProgress - fiberPos);
         d = min(d, 1.0 - d);
@@ -748,28 +784,36 @@
       uniform float uTime;
       varying float vFiberAlpha;
       varying float vGlobalAlpha;
+      varying float vProximity;
       varying vec3 vColor;
       void main() {
-        float base = 0.08;
-        float fiber = vFiberAlpha * 0.15;
+        // Baseline: 0.03 for distant edges, up to 0.45 for candidate-adjacent
+        float base = mix(0.03, 0.45, vProximity);
+        // Fiber pulse also scales with proximity
+        float fiber = vFiberAlpha * mix(0.05, 0.5, vProximity);
         float alpha = (base + fiber) * vGlobalAlpha;
         vec3 color = vColor;
-        color = mix(color, vec3(1.0, 0.88, 0.75), vFiberAlpha * 0.5);
+        // Brighten color near candidates
+        color = mix(color, vec3(1.0, 0.88, 0.75), vProximity * 0.6);
+        color = mix(color, vec3(1.0, 0.95, 0.85), vFiberAlpha * vProximity * 0.8);
         if (alpha < 0.001) discard;
         gl_FragColor = vec4(color, alpha);
       }
     `;
 
     // Build phylo edge geometry
-    const pePos = [], pePhase = [], peFiber = [], peProg = [], peCol = [];
+    const pePos = [], pePhase = [], peFiber = [], peProg = [], peCol = [], peProx = [];
     const _tc = new THREE.Color();
     for (const edge of phyloEdges) {
       const a = phyloNodes[edge.sourceIdx].position;
       const b = phyloNodes[edge.targetIdx].position;
       const fc = FAMILY_COLORS[phyloNodes[edge.sourceIdx].family] || [0.0, 0.8, 0.5];
-      _tc.setHSL(fc[0], fc[1], fc[2]).multiplyScalar(0.3);
+      // Edge proximity = max of its two endpoints
+      const prox = Math.max(nodeProximity[edge.sourceIdx], nodeProximity[edge.targetIdx]);
+      // Color scales with proximity: dim gray far away, full family color near candidates
+      _tc.setHSL(fc[0], fc[1], fc[2]).multiplyScalar(0.15 + prox * 0.55);
       const phase = Math.random() * Math.PI * 2;
-      const speed = 0.08 + Math.random() * 0.08;
+      const speed = 0.06 + prox * 0.12 + Math.random() * 0.06;
       for (let s = 0; s < SEGMENTS; s++) {
         const t0 = s / SEGMENTS, t1 = (s + 1) / SEGMENTS;
         pePos.push(
@@ -779,6 +823,7 @@
         pePhase.push(phase, phase);
         peFiber.push(speed, speed);
         peProg.push(t0, t1);
+        peProx.push(prox, prox);
         peCol.push(_tc.r, _tc.g, _tc.b, _tc.r, _tc.g, _tc.b);
       }
     }
@@ -788,6 +833,7 @@
     phyloEdgeGeo.setAttribute('aPhaseOffset', new THREE.Float32BufferAttribute(pePhase, 1));
     phyloEdgeGeo.setAttribute('aFiberSpeed', new THREE.Float32BufferAttribute(peFiber, 1));
     phyloEdgeGeo.setAttribute('aEdgeProgress', new THREE.Float32BufferAttribute(peProg, 1));
+    phyloEdgeGeo.setAttribute('aProximity', new THREE.Float32BufferAttribute(peProx, 1));
     phyloEdgeGeo.setAttribute('aColor', new THREE.Float32BufferAttribute(peCol, 3));
     const phyloEdgeMat = new THREE.ShaderMaterial({
       vertexShader: phyloEdgeVS, fragmentShader: phyloEdgeFS,
@@ -1204,7 +1250,6 @@
     // ================================================================
     // ANIMATION PHASE STATE MACHINE
     // ================================================================
-    const clock = new THREE.Clock();
     let globalElapsed = 0;
     let animPhase = 'darkBirth';
     let phaseTime = 0;
@@ -1242,9 +1287,20 @@
     // ================================================================
     // ANIMATION LOOP
     // ================================================================
+    let _lastTime = performance.now();
     function animate() {
-      requestAnimationFrame(animate);
-      const dt = Math.min(clock.getDelta(), 0.05);
+      // Use setTimeout fallback for background tabs where rAF is throttled
+      if (document.hidden) {
+        setTimeout(animate, 16);
+      } else {
+        requestAnimationFrame(animate);
+      }
+      const now = performance.now();
+      const rawDelta = (now - _lastTime) / 1000;
+      _lastTime = now;
+      // Allow larger dt in background tabs so animation catches up
+      const dtCap = document.hidden ? 2.0 : 0.05;
+      const dt = Math.min(rawDelta, dtCap);
       globalElapsed += dt;
       phaseTime += dt;
 
@@ -1467,6 +1523,7 @@
 
       // ---- RENDER ----
       composer.render();
+
     }
 
     animate();
