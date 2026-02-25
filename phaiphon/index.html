@@ -229,7 +229,7 @@
       margin-left: 6px;
     }
 
-    /* Smoke test note */
+    /* Bottom status + info trigger */
     #smoke-note {
       position: fixed;
       bottom: 8px;
@@ -243,6 +243,101 @@
       white-space: nowrap;
       pointer-events: none;
     }
+    #info-trigger {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      color: rgba(255, 255, 255, 0.22);
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      transition: color 0.2s;
+      white-space: nowrap;
+    }
+    #info-trigger:hover { color: rgba(255, 200, 140, 0.5); }
+
+    /* Graph info panel */
+    #graph-info {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.4);
+    }
+    #graph-info-box {
+      background: rgba(8, 8, 12, 0.65);
+      backdrop-filter: blur(28px) saturate(1.1);
+      -webkit-backdrop-filter: blur(28px) saturate(1.1);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      padding: 24px 28px 18px;
+      color: #bbb;
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 11.5px;
+      line-height: 1.75;
+      max-width: 560px;
+      min-width: 320px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 12px 60px rgba(0, 0, 0, 0.8);
+      animation: infoFadeIn 0.3s ease-out;
+    }
+    @keyframes infoFadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    #graph-info-box .info-h {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin: 0 0 10px 0;
+    }
+    #graph-info-box .info-section {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    #graph-info-box .info-section-h {
+      color: rgba(255, 200, 140, 0.5);
+      font-size: 9.5px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin: 0 0 6px 0;
+    }
+    #graph-info-box .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 1px 0;
+    }
+    #graph-info-box .info-label {
+      color: rgba(255, 255, 255, 0.35);
+      min-width: 120px;
+    }
+    #graph-info-box .info-val {
+      color: rgba(255, 255, 255, 0.6);
+      text-align: right;
+    }
+    #graph-info-box .info-val.warn {
+      color: rgba(255, 160, 80, 0.55);
+    }
+    #graph-info-box p {
+      margin: 0 0 6px 0;
+      color: rgba(255, 255, 255, 0.4);
+    }
+    #graph-info-box .info-close {
+      margin-top: 14px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.15);
+      letter-spacing: 1.5px;
+      text-align: right;
+      cursor: pointer;
+    }
+    #graph-info-box .info-close:hover { color: rgba(255, 255, 255, 0.35); }
 
     /* Mobile */
     @media (max-width: 768px) {
@@ -305,7 +400,56 @@
 
   <div id="tooltip"></div>
 
-  <div id="smoke-note">3000-step scan complete &middot; null distribution uncalibrated &middot; results are preliminary</div>
+  <div id="info-trigger" onclick="document.getElementById('graph-info').style.display='flex'">What does this graph show?</div>
+  <div id="smoke-note">3000-step scan &middot; null distribution uncalibrated &middot; results are preliminary</div>
+
+  <!-- Graph info panel -->
+  <div id="graph-info" onclick="if(event.target===this)this.style.display='none'">
+    <div id="graph-info-box">
+      <div class="info-h">PhaiPhon &mdash; Linear A Decipherment Scan</div>
+
+      <p>This visualization places Linear A &mdash; the undeciphered writing system of Minoan Crete (~1800&ndash;1450 BCE) &mdash; at the centre of a 1,926-node phylogenetic tree of the world&rsquo;s languages. A neural phonetic model was trained against each of 16 candidate languages, producing a raw closeness score measuring phonetic similarity. Those scores are encoded as pulsing fiber-optic beams connecting the central Linear A cluster to each candidate&rsquo;s position in the tree.</p>
+
+      <div class="info-section">
+        <div class="info-section-h">Visual Elements</div>
+        <div class="info-row"><span class="info-label">Gold cluster (centre)</span><span class="info-val">34 Linear A signs + 73 words + 48 inscriptions</span></div>
+        <div class="info-row"><span class="info-label">Bright nodes (tree)</span><span class="info-val">16 candidate languages at their phylogenetic positions</span></div>
+        <div class="info-row"><span class="info-label">Pulsing beams</span><span class="info-val">Closeness score (brightness) per candidate</span></div>
+        <div class="info-row"><span class="info-label">Dim background</span><span class="info-val">1,910 other languages providing phylogenetic context</span></div>
+        <div class="info-row"><span class="info-label">BFS light-up</span><span class="info-val">Startup animation traces phylogenetic branches outward from candidates</span></div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-section-h">Side Panel Modes</div>
+        <div class="info-row"><span class="info-label">FULL SCAN</span><span class="info-val">All 16 candidates with closeness beams</span></div>
+        <div class="info-row"><span class="info-label">TOP 3</span><span class="info-val">Highest raw closeness: Aramaic, Coptic, ModernGreek</span></div>
+        <div class="info-row"><span class="info-label">FAMILIES</span><span class="info-val">Candidates grouped by language family</span></div>
+        <div class="info-row"><span class="info-label">VOWELS</span><span class="info-val">Vowel harmony analysis (the one validated finding)</span></div>
+        <div class="info-row"><span class="info-label">SIGNS</span><span class="info-val">Click a sign to see all words containing it</span></div>
+        <div class="info-row"><span class="info-label">TEXTS</span><span class="info-val">Click an inscription to see its word decomposition</span></div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-section-h">What the Model Does</div>
+        <p>The PhaiPhon model (adapted from Luo et al. 2021) learns character-level sound correspondences between an unknown script and a known language using differentiable dynamic programming. It is fully unsupervised &mdash; no translations or cognate labels are used during training. For each candidate language, the model produces a closeness score representing how well Linear A&rsquo;s phonetic patterns can be mapped to that language&rsquo;s sound system.</p>
+      </div>
+
+      <div class="info-section">
+        <div class="info-section-h">Data Integrity</div>
+        <div class="info-row"><span class="info-label">Training</span><span class="info-val">3,000 steps &times; 1 restart &times; 16 languages</span></div>
+        <div class="info-row"><span class="info-label">Corpus</span><span class="info-val">48 Za-category inscriptions, 73 unique words</span></div>
+        <div class="info-row"><span class="info-label">Null calibration</span><span class="info-val warn">NOT COMPLETE &mdash; all z-scores and Bayes factors are invalid</span></div>
+        <p style="margin-top:6px">All closeness-based statistics (z-scores, p-values, Bayes factors) shown in tooltips use a placeholder null distribution (&mu;=0.05, &sigma;=0.03) that is far too tight. Under this null, all 16 candidates &mdash; including obvious negative controls &mdash; appear significant. A preliminary recalibration with 4 negative controls (&mu;=0.253, &sigma;=0.040) found no candidate significant after Bonferroni correction. Raw closeness values are valid relative to each other but their statistical significance cannot be assessed until a proper null calibration is completed.</p>
+      </div>
+
+      <div class="info-section">
+        <div class="info-section-h">What Is Established</div>
+        <p>The one finding independent of null calibration: a chi-squared test of root&ndash;suffix vowel co-occurrence shows statistically significant vowel harmony in Linear A (&chi;&sup2;=50.2, p=0.000021, Cram&eacute;r&rsquo;s V=0.210). This is a moderate effect from a small corpus (48 inscriptions) and should be interpreted cautiously.</p>
+      </div>
+
+      <div class="info-close" onclick="document.getElementById('graph-info').style.display='none'">CLOSE</div>
+    </div>
+  </div>
 
   <script src="../language_data.js"></script>
   <script src="phaiphon_data.js"></script>
