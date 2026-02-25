@@ -186,6 +186,49 @@
       color: rgba(255, 255, 255, 0.45);
     }
 
+    /* Leader-line labels */
+    #leader-labels {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 90;
+      overflow: hidden;
+    }
+    .leader-label {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+    }
+    .leader-svg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .leader-svg polyline {
+      fill: none;
+      stroke: rgba(255,255,255,0.7);
+      stroke-width: 1;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .leader-text {
+      position: fixed;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255,255,255,0.85);
+      white-space: nowrap;
+      pointer-events: none;
+      text-shadow: 0 0 8px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.6);
+    }
+
     /* Tooltip */
     #tooltip {
       position: fixed;
@@ -402,6 +445,7 @@
   </div>
 
   <div id="tooltip"></div>
+  <div id="leader-labels"></div>
 
   <div id="info-trigger" onclick="document.getElementById('graph-info').style.display='flex'">What does this graph show?</div>
   <div id="smoke-note">3000-step scan &middot; null distribution uncalibrated &middot; results are preliminary</div>
@@ -1338,6 +1382,225 @@
     }
     function hideTooltip() { tooltipEl.style.display = 'none'; }
 
+    // ================================================================
+    // BRANCH LEADER-LINE LABELS
+    // ================================================================
+    const leaderContainer = document.getElementById('leader-labels');
+    const leaderLabels = new Map(); // key → state
+    const LABEL_ANIM_DUR = 0.4;
+
+    // Build family→nodeIndices lookup from phyloNodes
+    const familyNodeIndices = new Map();
+    phyloNodes.forEach((n, i) => {
+      if (!familyNodeIndices.has(n.family)) familyNodeIndices.set(n.family, []);
+      familyNodeIndices.get(n.family).push(i);
+    });
+
+    function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+    function createLeaderLabel(key, name, nodeIndices) {
+      if (leaderLabels.has(key)) return;
+      const container = document.createElement('div');
+      container.className = 'leader-label';
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'leader-svg');
+      svg.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%';
+      const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      svg.appendChild(polyline);
+      const textEl = document.createElement('div');
+      textEl.className = 'leader-text';
+      textEl.textContent = name;
+      container.appendChild(svg);
+      container.appendChild(textEl);
+      leaderContainer.appendChild(container);
+      leaderLabels.set(key, {
+        key, name, nodeIndices: new Set(nodeIndices),
+        phase: 'expanding', animT: 0,
+        svgEl: svg, polylineEl: polyline, textEl, containerEl: container,
+        totalLength: 0,
+      });
+    }
+
+    function destroyLeaderLabel(key) {
+      const state = leaderLabels.get(key);
+      if (!state) return;
+      state.containerEl.remove();
+      leaderLabels.delete(key);
+    }
+
+    function toggleLeaderLabel(key, name, nodeIndices) {
+      const existing = leaderLabels.get(key);
+      if (existing) {
+        if (existing.phase === 'collapsing') {
+          existing.phase = 'expanding';
+        } else {
+          existing.phase = 'collapsing';
+        }
+      } else {
+        createLeaderLabel(key, name, nodeIndices);
+      }
+    }
+
+    const _projTmp = new THREE.Vector3();
+
+    function getSelectionScreenInfo(labelState) {
+      const indices = labelState.nodeIndices;
+      const W = window.innerWidth, H = window.innerHeight;
+      // Project globe center
+      _projTmp.set(0, 0, 0);
+      worldGroup.localToWorld(_projTmp);
+      _projTmp.project(camera);
+      const gcx = (_projTmp.x * 0.5 + 0.5) * W;
+      const gcy = (-_projTmp.y * 0.5 + 0.5) * H;
+      const vPad = 100;
+      const vL = -vPad, vT = -vPad, vR = W + vPad, vB = H + vPad;
+      const visible = [];
+      for (const ni of indices) {
+        phyloMeshes[ni].getWorldPosition(_projTmp);
+        _projTmp.project(camera);
+        if (_projTmp.z > 1) continue;
+        const sx = (_projTmp.x * 0.5 + 0.5) * W;
+        const sy = (-_projTmp.y * 0.5 + 0.5) * H;
+        if (sx < vL || sx > vR || sy < vT || sy > vB) continue;
+        visible.push({ sx, sy });
+      }
+      if (visible.length === 0) return null;
+      let cx = 0, cy = 0;
+      for (const p of visible) { cx += p.sx; cy += p.sy; }
+      cx /= visible.length; cy /= visible.length;
+      let rx = cx - gcx, ry = cy - gcy;
+      const rLen = Math.hypot(rx, ry);
+      if (rLen > 1) { rx /= rLen; ry /= rLen; }
+      else { rx = 0; ry = -1; }
+      let maxRadial = 0;
+      for (const p of visible) {
+        const d = (p.sx - cx) * rx + (p.sy - cy) * ry;
+        if (d > maxRadial) maxRadial = d;
+      }
+      return { cx, cy, rx, ry, visibleRadius: maxRadial };
+    }
+
+    function computeLabelGeometry(info, name) {
+      const W = window.innerWidth, H = window.innerHeight;
+      const margin = 30;
+      const { cx: anchorX, cy: anchorY, rx, ry, visibleRadius } = info;
+      const pad = 25;
+      const maxDiag = 200;
+      const elbowDist = Math.min(visibleRadius + pad, maxDiag);
+      let elbowX = anchorX + rx * elbowDist;
+      let elbowY = anchorY + ry * elbowDist;
+      let dirX = rx >= 0 ? 1 : -1;
+      const charW = 6.5;
+      const textW = name.length * charW + 12;
+      const horizLen = Math.max(100, textW);
+      let hx = elbowX + dirX * horizLen;
+      const leftBound = margin, rightBound = W - margin;
+      const topBound = margin, bottomBound = H - margin;
+      if (hx < leftBound || hx > rightBound) {
+        dirX = -dirX;
+        hx = elbowX + dirX * horizLen;
+      }
+      elbowX = Math.max(leftBound, Math.min(rightBound, elbowX));
+      elbowY = Math.max(topBound, Math.min(bottomBound, elbowY));
+      hx = Math.max(leftBound, Math.min(rightBound, hx));
+      if (Math.abs(hx - elbowX) < 30) {
+        dirX = -dirX;
+        hx = elbowX + dirX * horizLen;
+        hx = Math.max(leftBound, Math.min(rightBound, hx));
+      }
+      const points = `${anchorX},${anchorY} ${elbowX},${elbowY} ${hx},${elbowY}`;
+      const seg1 = Math.hypot(elbowX - anchorX, elbowY - anchorY);
+      const seg2 = Math.abs(hx - elbowX);
+      const totalLength = seg1 + seg2;
+      const textX = Math.min(elbowX, hx) + 3;
+      const textY = elbowY - 15;
+      return { points, totalLength, textX, textY, elbowY };
+    }
+
+    function updateLeaderLabels(dt) {
+      if (leaderLabels.size === 0) return;
+      const candidates = [];
+      for (const [key, state] of leaderLabels) {
+        if (state.phase === 'expanding') {
+          state.animT += dt / LABEL_ANIM_DUR;
+          if (state.animT >= 1) { state.animT = 1; state.phase = 'visible'; }
+        } else if (state.phase === 'collapsing') {
+          state.animT -= dt / LABEL_ANIM_DUR;
+          if (state.animT <= 0) { destroyLeaderLabel(key); continue; }
+        }
+        const info = getSelectionScreenInfo(state);
+        if (!info) { state.containerEl.style.display = 'none'; continue; }
+        state.containerEl.style.display = '';
+        candidates.push({ state, info });
+      }
+      const labelPositions = [];
+      for (const { state, info } of candidates) {
+        const geo = computeLabelGeometry(info, state.name);
+        state.totalLength = geo.totalLength;
+        labelPositions.push({ state, geo, textY: geo.textY, textX: geo.textX });
+      }
+      // Overlap avoidance
+      labelPositions.sort((a, b) => a.textY - b.textY);
+      const minGap = 20;
+      for (let i = 1; i < labelPositions.length; i++) {
+        const prev = labelPositions[i - 1];
+        const curr = labelPositions[i];
+        if (Math.abs(curr.textX - prev.textX) < 160) {
+          const gap = curr.textY - prev.textY;
+          if (gap < minGap) {
+            const nudge = (minGap - gap) / 2;
+            prev.textY -= nudge; prev.geo.textY -= nudge;
+            curr.textY += nudge; curr.geo.textY += nudge;
+          }
+        }
+      }
+      // Apply to DOM
+      for (const { state, geo } of labelPositions) {
+        const easedT = easeOutCubic(state.animT);
+        state.polylineEl.setAttribute('points', geo.points);
+        state.polylineEl.setAttribute('stroke-dasharray', geo.totalLength);
+        state.polylineEl.setAttribute('stroke-dashoffset', geo.totalLength - geo.totalLength * easedT);
+        state.textEl.style.left = geo.textX + 'px';
+        state.textEl.style.top = geo.textY + 'px';
+        const textOpacity = Math.max(0, Math.min(1, (state.animT - 0.6) / 0.4));
+        state.textEl.style.opacity = textOpacity;
+      }
+    }
+
+    // Edge click detection — screen-space point-to-segment distance
+    function pointToSegmentDist(px, py, ax, ay, bx, by) {
+      const abx = bx - ax, aby = by - ay;
+      const apx = px - ax, apy = py - ay;
+      const t = Math.max(0, Math.min(1, (apx * abx + apy * aby) / (abx * abx + aby * aby + 1e-12)));
+      const cx = ax + t * abx, cy = ay + t * aby;
+      return Math.hypot(px - cx, py - cy);
+    }
+
+    const _tmpA = new THREE.Vector3(), _tmpB = new THREE.Vector3();
+
+    function findNearestPhyloBranch(mx, my, maxDist) {
+      if (!maxDist) maxDist = 18;
+      let bestDist = maxDist + 1, bestFamily = null;
+      for (const edge of phyloEdges) {
+        phyloMeshes[edge.sourceIdx].getWorldPosition(_tmpA);
+        _tmpA.project(camera);
+        if (_tmpA.z > 1) continue;
+        const sx1 = (_tmpA.x * 0.5 + 0.5) * window.innerWidth;
+        const sy1 = (-_tmpA.y * 0.5 + 0.5) * window.innerHeight;
+        phyloMeshes[edge.targetIdx].getWorldPosition(_tmpB);
+        _tmpB.project(camera);
+        if (_tmpB.z > 1) continue;
+        const sx2 = (_tmpB.x * 0.5 + 0.5) * window.innerWidth;
+        const sy2 = (-_tmpB.y * 0.5 + 0.5) * window.innerHeight;
+        const d = pointToSegmentDist(mx, my, sx1, sy1, sx2, sy2);
+        if (d < bestDist) {
+          bestDist = d;
+          bestFamily = phyloNodes[edge.sourceIdx].family;
+        }
+      }
+      return bestFamily;
+    }
+
     function handleClick(e) {
       raycaster.setFromCamera(new THREE.Vector2(mouse.x, mouse.y), camera);
       // Check overlay nodes first
@@ -1347,11 +1610,24 @@
         showTooltip(overlayHits[0].object.userData, e.clientX, e.clientY);
         return;
       }
-      // Check phylo nodes
+      // Check phylo nodes — if a node is hit, toggle its family label
       const phyloHits = raycaster.intersectObjects(phyloMeshes);
       if (phyloHits.length > 0) {
-        showTooltip(phyloHits[0].object.userData, e.clientX, e.clientY);
+        const hitData = phyloHits[0].object.userData;
+        const family = phyloNodes[hitData.nodeIndex].family;
+        const indices = familyNodeIndices.get(family);
+        if (indices) toggleLeaderLabel(family, family, indices);
+        showTooltip(hitData, e.clientX, e.clientY);
         return;
+      }
+      // No node hit — check for edge click to toggle branch label
+      const family = findNearestPhyloBranch(e.clientX, e.clientY);
+      if (family) {
+        const indices = familyNodeIndices.get(family);
+        if (indices) {
+          toggleLeaderLabel(family, family, indices);
+          return;
+        }
       }
       hideTooltip();
     }
@@ -1854,6 +2130,9 @@
 
         mesh.position.copy(phyloNodes[i].position);
       }
+
+      // ---- UPDATE LEADER LABELS ----
+      updateLeaderLabels(dt);
 
       // ---- RENDER ----
       composer.render();
