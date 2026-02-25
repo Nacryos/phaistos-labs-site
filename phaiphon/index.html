@@ -828,7 +828,7 @@
       mesh.userData = {
         baseSize: size,
         baseColor: baseColor.clone(),
-        targetOpacity: isCandidate ? 0.9 : (0.25 + nodeProximity[i] * 0.45),
+        targetOpacity: isCandidate ? 0.9 : (0.08 + nodeProximity[i] * 0.55),
         currentOpacity: 0,
         isCandidate,
         nodeIndex: i,
@@ -953,8 +953,8 @@
       varying vec3 vColor;
       void main() {
         float p = vProximity * vProximity * vProximity;
-        float base = mix(0.005, 0.7, p);
-        float fiber = vFiberAlpha * mix(0.01, 0.9, p);
+        float base = mix(0.003, 1.0, p);
+        float fiber = vFiberAlpha * mix(0.005, 1.2, p);
         // Wavefront pulse adds gentle glow at the expanding wave edge
         float wavefront = vWavefrontGlow * 0.6;
         float alpha = (base + fiber + wavefront) * vGlobalAlpha * vReveal;
