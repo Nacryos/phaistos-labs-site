@@ -305,7 +305,7 @@
 
   <div id="tooltip"></div>
 
-  <div id="smoke-note">50-step smoke test &middot; full 3000-step run in progress</div>
+  <div id="smoke-note">3000-step scan complete &middot; null distribution uncalibrated &middot; results are preliminary</div>
 
   <script src="../language_data.js"></script>
   <script src="phaiphon_data.js"></script>
@@ -662,7 +662,7 @@
       let size, opacity;
       if (isCandidate) {
         const cand = PD.candidates.find(c => candidatePhyloIdx.get(c.id) === i);
-        const score = cand && cand.composite_score ? cand.composite_score : 3;
+        const score = cand && cand.composite_score_uncalibrated ? cand.composite_score_uncalibrated : 3;
         size = 12 + (score / 10) * 8;
         opacity = 0;
         baseColor.lerp(COLOR_CREAM, 0.3);
@@ -971,8 +971,8 @@
       const idx = candidatePhyloIdx.get(c.id);
       if (idx === undefined) return;
       const target = phyloNodes[idx].position;
-      const score = c.closeness || 0.15; // placeholder for awaiting
-      const speed = 0.15 + (c.z_score || 5) * 0.008;
+      const score = c.closeness || 0.15;
+      const speed = 0.15 + (c.z_score_uncalibrated || 5) * 0.008;
       const hsl = c.displayColor || [0.08, 0.8, 0.5];
       const beamColor = new THREE.Color().setHSL(hsl[0], hsl[1], hsl[2]);
       beamColor.lerp(new THREE.Color('#ffffff'), 0.3);
@@ -1146,12 +1146,13 @@
           if (cand.closeness !== null) {
             const barW = Math.round(cand.closeness * 100);
             html += `<div class="tt-row"><span class="tt-label">Closeness</span><span class="tt-value tt-gold">${cand.closeness.toFixed(4)}<span class="tt-bar" style="width:${barW}px"></span></span></div>
-              <div class="tt-row"><span class="tt-label">z-score</span><span class="tt-value">${cand.z_score.toFixed(2)}</span></div>
-              <div class="tt-row"><span class="tt-label">Bayes Factor</span><span class="tt-value">${cand.bayes_factor.toFixed(1)}</span></div>
-              <div class="tt-row"><span class="tt-label">Composite</span><span class="tt-value tt-gold">${cand.composite_score.toFixed(2)}</span></div>
-              <div class="tt-row"><span class="tt-label">Verdict</span><span class="tt-value">${cand.interpretation}</span></div>`;
+              <div class="tt-row"><span class="tt-label">z-score*</span><span class="tt-value">${cand.z_score_uncalibrated.toFixed(2)}</span></div>
+              <div class="tt-row"><span class="tt-label">Bayes Factor*</span><span class="tt-value">${cand.bayes_factor_uncalibrated.toFixed(1)}</span></div>
+              <div class="tt-row"><span class="tt-label">Composite*</span><span class="tt-value tt-gold">${cand.composite_score_uncalibrated.toFixed(2)}</span></div>
+              <div class="tt-row"><span class="tt-value" style="color:rgba(255,180,100,0.5);font-size:9px">*uncalibrated null \u2014 not statistically valid</span></div>
+              <div class="tt-row"><span class="tt-label">Note</span><span class="tt-value" style="font-size:9px">${cand.interpretation}</span></div>`;
           } else {
-            html += `<div class="tt-row"><span class="tt-value" style="color:rgba(255,255,255,0.3)">Awaiting full run</span></div>`;
+            html += `<div class="tt-row"><span class="tt-value" style="color:rgba(255,255,255,0.3)">No data</span></div>`;
           }
         }
       } else {
@@ -1253,10 +1254,11 @@
 
       if (currentMode === 'topCandidates') {
         const top3 = PD.candidates.filter(c => c.closeness !== null)
-          .sort((a, b) => b.composite_score - a.composite_score).slice(0, 3);
+          .sort((a, b) => b.closeness - a.closeness).slice(0, 3);
         dynEl.innerHTML = '<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.06);padding-top:6px">' +
-          '<div class="stat-header">Top Candidates</div>' +
-          top3.map(c => `<div class="stat-row"><span class="stat-label">${c.id}</span><span class="stat-value gold">${c.composite_score.toFixed(2)}</span></div>`).join('') +
+          '<div class="stat-header">Top by Closeness*</div>' +
+          top3.map(c => `<div class="stat-row"><span class="stat-label">${c.id}</span><span class="stat-value gold">${c.closeness.toFixed(3)}</span></div>`).join('') +
+          '<div style="color:rgba(255,180,100,0.4);font-size:8px;margin-top:4px">*null uncalibrated</div>' +
           '</div>';
       } else if (currentMode === 'vowelHarmony') {
         const vh = PD.vowelHarmony;
