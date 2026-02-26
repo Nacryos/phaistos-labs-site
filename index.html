@@ -3258,7 +3258,7 @@
       } // end else (!searchActive)
 
       // Rotation — quaternion-based (no gimbal lock)
-      if (!isDragging && !isHoldingNode) {
+      if (!isDragging && !isHoldingNode && !hoveredMesh) {
         _deltaQuat.setFromAxisAngle(_rotYAxis, dt * 0.06);
         orientationQuat.premultiply(_deltaQuat);
       }
