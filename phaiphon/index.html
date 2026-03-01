@@ -1290,7 +1290,7 @@
       const dx = e.clientX - dragStartX;
       const dy = e.clientY - dragStartY;
       dragStartX = e.clientX; dragStartY = e.clientY;
-      const speed = 0.003;
+      const speed = 0.004;
       _deltaQuat.setFromAxisAngle(_rotYAxis, dx * speed);
       orientationQuat.premultiply(_deltaQuat);
       _deltaQuat.setFromAxisAngle(_rotXAxis, dy * speed);
@@ -1966,16 +1966,16 @@
 
       // ---- ROTATION ----
       if (!isDragging) {
-        _deltaQuat.setFromAxisAngle(_rotYAxis, dt * 0.05);
+        _deltaQuat.setFromAxisAngle(_rotYAxis, dt * 0.06);
         orientationQuat.premultiply(_deltaQuat);
       }
       worldGroup.quaternion.copy(orientationQuat);
       if (!isDragging) {
-        _deltaQuat.setFromAxisAngle(_rotXAxis, mouse.y * 0.001);
+        _deltaQuat.setFromAxisAngle(_rotXAxis, mouse.y * 0.002);
         worldGroup.quaternion.multiply(_deltaQuat);
       }
-      // Frame-rate-independent zoom: 0.06/frame at 60fps, scales correctly at any fps
-      const zoomLerp = 1 - Math.pow(1 - 0.06, dt * 60);
+      // Frame-rate-independent zoom: 0.08/frame at 60fps (matches main page)
+      const zoomLerp = 1 - Math.pow(1 - 0.08, dt * 60);
       camera.position.z += (targetZoom - camera.position.z) * zoomLerp;
       camera.lookAt(0, 0, 0);
 
