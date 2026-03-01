@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
+    html { }
     body {
       background: #000;
       color: #fff;
@@ -40,6 +40,7 @@
       position: relative;
       z-index: 2;
       height: 100vh;
+      height: 100dvh;
       display: flex;
       flex-direction: column;
       align-items: flex-start;
@@ -861,8 +862,18 @@
     const scrollIndicator = document.getElementById('scroll-indicator');
     const graphLabel = document.getElementById('graph-label');
 
-    // Content reveal on scroll
+    // Content reveal via IntersectionObserver (no per-frame layout queries)
     const revealEls = document.querySelectorAll('#content-inner h2, #content-inner p, #content-inner .contact');
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const idx = Array.prototype.indexOf.call(revealEls, entry.target);
+          setTimeout(() => entry.target.classList.add('visible'), idx * 80);
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: '0px 0px -15% 0px', threshold: 0 });
+    revealEls.forEach(el => revealObserver.observe(el));
 
     // Expose zoom state for the scroll handler (set by Three.js module)
     window._graphZoom = { target: window.innerWidth <= 768 ? 3400 : 2800, base: window.innerWidth <= 768 ? 3400 : 2800 };
@@ -895,13 +906,7 @@
       }
       graphLabel.style.opacity = Math.max(0, 1 - heroProgress * 3);
 
-      // Content: reveal elements as they enter viewport
-      revealEls.forEach((el, i) => {
-        const rect = el.getBoundingClientRect();
-        if (rect.top < vh * 0.85) {
-          setTimeout(() => el.classList.add('visible'), i * 80);
-        }
-      });
+      // Content reveal handled by IntersectionObserver (no layout thrash)
     }
 
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -2579,34 +2584,30 @@
     let targetCamX = 0, targetCamY = 0;
     const zoomFocus = new THREE.Vector2(0, 0); // NDC of zoom target (-1 to 1)
 
-    // Wheel: zoom graph when in hero view; bridge zoom-out to page scroll only at default zoom
+    // Wheel: zoom graph only when at the very top of the page; native scroll everywhere else
     window.addEventListener('wheel', (e) => {
-      // If already scrolled past hero, let the page scroll normally
-      if (window.scrollY > window.innerHeight * 0.3) return;
+      // If page is scrolled at all, let native scroll handle everything
+      // (fixes: can't-scroll-back-to-hero trap at the old 30% threshold)
+      if (window.scrollY > 5) return;
 
-      // If graph is zoomed in at all (below base), capture ALL wheel for graph zoom
+      // If graph is zoomed in, capture ALL wheel for graph zoom
       if (targetZoom < BASE_ZOOM - 10) {
         e.preventDefault();
-        // Update zoom focus when zooming in further
         if (e.deltaY < 0) { zoomFocus.set(mouse.x, mouse.y); }
         targetZoom += e.deltaY * 2;
         targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, targetZoom));
-        // Clamp so it doesn't overshoot past base when zooming out
         if (targetZoom > BASE_ZOOM) targetZoom = BASE_ZOOM;
         return;
       }
 
-      // At default zoom level
+      // At default zoom, at top of page: scroll-up zooms into graph
       if (e.deltaY < 0) {
-        // Scrolling up / zooming in — zoom the graph
         e.preventDefault();
-        zoomFocus.set(mouse.x, mouse.y); // capture zoom direction
+        zoomFocus.set(mouse.x, mouse.y);
         targetZoom += e.deltaY * 2;
         targetZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, targetZoom));
-      } else {
-        // Scrolling down at default zoom — bridge to page scroll
-        window.scrollBy({ top: e.deltaY * 0.8, behavior: 'auto' });
       }
+      // Scroll-down: fall through to native scroll (no double-scroll from scrollBy)
     }, { passive: false });
 
     // ================================================================
@@ -2701,7 +2702,7 @@
         const dy = t.clientY - touchStartY;
         const absDx = Math.abs(dx), absDy = Math.abs(dy);
 
-        if (!touchMoved && absDx + absDy > 10) {
+        if (!touchMoved && absDx + absDy > 5) {
           touchMoved = true;
           if (touchHoldTimer) { clearTimeout(touchHoldTimer); touchHoldTimer = null; }
           // Decide: horizontal-dominant = graph rotate, vertical = page scroll
