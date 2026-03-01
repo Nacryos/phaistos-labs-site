@@ -1844,7 +1844,7 @@
       const rawDelta = (now - _lastTime) / 1000;
       _lastTime = now;
       // Allow larger dt in background tabs so animation catches up
-      const dtCap = document.hidden ? 2.0 : 0.05;
+      const dtCap = document.hidden ? 2.0 : 0.1;
       const dt = Math.min(rawDelta, dtCap);
       globalElapsed += dt;
       phaseTime += dt;
@@ -1964,7 +1964,9 @@
         _deltaQuat.setFromAxisAngle(_rotXAxis, mouse.y * 0.001);
         worldGroup.quaternion.multiply(_deltaQuat);
       }
-      camera.position.z += (targetZoom - camera.position.z) * 0.06;
+      // Frame-rate-independent zoom: 0.06/frame at 60fps, scales correctly at any fps
+      const zoomLerp = 1 - Math.pow(1 - 0.06, dt * 60);
+      camera.position.z += (targetZoom - camera.position.z) * zoomLerp;
       camera.lookAt(0, 0, 0);
 
       // ---- UPDATE SHADER UNIFORMS ----

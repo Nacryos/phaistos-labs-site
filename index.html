@@ -3186,12 +3186,22 @@
     // ================================================================
     // ANIMATION LOOP
     // ================================================================
-    const clock = new THREE.Clock();
     const NODE_FADE_DUR = 0.6;
+    let _lastTime = performance.now();
 
     function animate() {
-      requestAnimationFrame(animate);
-      const dt = Math.min(clock.getDelta(), 0.05);
+      // Background-tab fallback: setTimeout keeps the loop alive when rAF is throttled
+      if (document.hidden) {
+        setTimeout(animate, 16);
+      } else {
+        requestAnimationFrame(animate);
+      }
+      const now = performance.now();
+      const rawDt = (now - _lastTime) / 1000;
+      _lastTime = now;
+      // 0.1s cap (10fps floor) prevents slow-motion during mild frame drops;
+      // 2.0s cap in background lets the phase machine catch up on tab return
+      const dt = Math.min(rawDt, document.hidden ? 2.0 : 0.1);
       globalElapsed += dt;
       phaseTime += dt;
 
@@ -3269,7 +3279,9 @@
         _deltaQuat.setFromAxisAngle(_rotXAxis, mouse.y * 0.002);
         worldGroup.quaternion.multiply(_deltaQuat);
       }
-      camera.position.z += (targetZoom - camera.position.z) * 0.08;
+      // Frame-rate-independent zoom: 0.08/frame at 60fps, scales correctly at any fps
+      const zoomLerp = 1 - Math.pow(1 - 0.08, dt * 60);
+      camera.position.z += (targetZoom - camera.position.z) * zoomLerp;
       window._graphZoom.target = targetZoom;
       window._graphZoom.base = BASE_ZOOM;
 
@@ -3278,9 +3290,10 @@
       const maxShift = 550 * zoomDepth; // approximate graph radius
       targetCamX = zoomFocus.x * maxShift;
       targetCamY = zoomFocus.y * maxShift;
-      // Smooth lerp — slightly slower than zoom for a flowing feel
-      camera.position.x += (targetCamX - camera.position.x) * 0.06;
-      camera.position.y += (targetCamY - camera.position.y) * 0.06;
+      // Frame-rate-independent camera shift: 0.06/frame at 60fps
+      const camLerp = 1 - Math.pow(1 - 0.06, dt * 60);
+      camera.position.x += (targetCamX - camera.position.x) * camLerp;
+      camera.position.y += (targetCamY - camera.position.y) * camLerp;
       // Always look at the graph center — keeps rotation pivot on screen
       camera.lookAt(0, 0, 0);
 
