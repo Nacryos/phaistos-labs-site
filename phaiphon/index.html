@@ -1283,6 +1283,7 @@
     const _deltaQuat = new THREE.Quaternion();
     const _rotYAxis = new THREE.Vector3(0, 1, 0);
     const _rotXAxis = new THREE.Vector3(1, 0, 0);
+    const _autoSpinAxis = new THREE.Vector3(Math.sin(20 * Math.PI / 180), Math.cos(20 * Math.PI / 180), 0).normalize();
     const mouse = { x: 0, y: 0 };
     const BASE_ZOOM = 2200, ZOOM_MIN = 400, ZOOM_MAX = 6000;
     let targetZoom = BASE_ZOOM;
@@ -1977,7 +1978,7 @@
 
       // ---- ROTATION ----
       if (!isDragging) {
-        _deltaQuat.setFromAxisAngle(_rotYAxis, dt * 0.06);
+        _deltaQuat.setFromAxisAngle(_autoSpinAxis, dt * 0.06);
         orientationQuat.premultiply(_deltaQuat);
       }
       worldGroup.quaternion.copy(orientationQuat);
