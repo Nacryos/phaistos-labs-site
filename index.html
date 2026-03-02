@@ -2540,7 +2540,7 @@
     const orientationQuat = new THREE.Quaternion();
     const _rotYAxis = new THREE.Vector3(0, 1, 0);
     const _rotXAxis = new THREE.Vector3(1, 0, 0);
-    const _autoSpinAxis = new THREE.Vector3(Math.sin(0.15 * Math.PI / 2), Math.cos(0.15 * Math.PI / 2), 0).normalize();
+    const _autoSpinAxis = new THREE.Vector3(Math.sin(20 * Math.PI / 180), Math.cos(20 * Math.PI / 180), 0).normalize();
     const _deltaQuat = new THREE.Quaternion();
 
     const graphEl = renderer.domElement;
