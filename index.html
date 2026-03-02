@@ -2246,7 +2246,7 @@
         baseSize: size,
         baseColor: baseColor.clone(),
         currentOpacity: 0,
-        twinkleSpeed: 0.3 + Math.random() * 0.7,
+        twinkleSpeed: 0.8 + Math.random() * 1.2,
         twinkleOffset: Math.random() * Math.PI * 2,
         nodeIndex: node.index,
         langData: {
@@ -3367,8 +3367,8 @@
         mesh.material.opacity = ud.currentOpacity;
 
         const pulse = 1 + 0.04 * Math.sin(globalElapsed * 1.2 + i * 0.5);
-        const twinkle = Math.pow(Math.max(0, Math.sin(globalElapsed * ud.twinkleSpeed + ud.twinkleOffset)), 20);
-        mesh.material.color.copy(ud.baseColor).multiplyScalar(1 + twinkle * 1.5);
+        const twinkle = Math.pow(Math.max(0, Math.sin(globalElapsed * ud.twinkleSpeed + ud.twinkleOffset)), 12);
+        mesh.material.color.copy(ud.baseColor).multiplyScalar(1 + twinkle * 2.5);
         let scaleMul = 1;
         if (searchActive) {
           // Search mode: each node independently cascade-grows based on its own reveal time
@@ -3391,7 +3391,7 @@
           scaleMul = 0.7;
         }
         } // end else (!searchActive)
-        const twinkleScale = 1 + twinkle * 0.15;
+        const twinkleScale = 1 + twinkle * 0.25;
         mesh.scale.setScalar(ud.baseSize * pulse * scaleMul * twinkleScale);
         mesh.position.copy(node.position);
       }
