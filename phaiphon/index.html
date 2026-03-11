@@ -852,6 +852,16 @@
     console.log('Proximity computed. Candidates:', candidateNodeSet.size,
       'Nodes within 5 hops:', Array.from(nodeDist).filter(d => d <= 5).length);
 
+    // Pre-compute each node's distance from origin for pulse wavefront
+    let maxPhyloDistFromOrigin = 0;
+    for (const n of phyloNodes) {
+      n.distFromOrigin = n.position.length();
+      if (n.distFromOrigin > maxPhyloDistFromOrigin) maxPhyloDistFromOrigin = n.distFromOrigin;
+    }
+    for (const n of phyloNodes) {
+      n.normalizedDist = maxPhyloDistFromOrigin > 0 ? n.distFromOrigin / maxPhyloDistFromOrigin : 0;
+    }
+
     for (let i = 0; i < NODE_COUNT; i++) {
       const node = phyloNodes[i];
       const isCandidate = candidateNodeSet.has(i);
@@ -969,11 +979,14 @@
       uniform float uTime;
       uniform float uGlobalAlpha;
       uniform float uWaveFront;
+      uniform float uPulseWaveFront;
+      uniform float uMaxDist;
       varying float vFiberAlpha;
       varying float vGlobalAlpha;
       varying float vProximity;
       varying float vReveal;
       varying float vWavefrontGlow;
+      varying float vPulseLit;
       varying vec3 vColor;
       attribute vec3 aColor;
       void main() {
@@ -994,6 +1007,14 @@
         float fiberPos = fract(uTime * aFiberSpeed + aPhaseOffset);
         float d = abs(aEdgeProgress - fiberPos);
         vFiberAlpha = exp(-d * d * 200.0);
+        // Big-bang pulse: gate edge visibility by radial wavefront
+        if (uPulseWaveFront >= 0.0) {
+          float nd = length(position) / max(uMaxDist, 1.0);
+          float wd = uPulseWaveFront - nd;
+          vPulseLit = smoothstep(-0.04, 0.10, wd);
+        } else {
+          vPulseLit = 1.0;
+        }
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `;
@@ -1005,6 +1026,7 @@
       varying float vProximity;
       varying float vReveal;
       varying float vWavefrontGlow;
+      varying float vPulseLit;
       varying vec3 vColor;
       void main() {
         float p = vProximity * vProximity * vProximity;
@@ -1020,6 +1042,9 @@
         color = mix(color, vec3(1.0, 0.97, 0.90), vWavefrontGlow * 0.6);
         alpha *= (1.0 - uModeDim);
         color *= (1.0 - uModeDim);
+        // Big-bang pulse: edges only visible behind wavefront
+        alpha *= vPulseLit;
+        color *= vPulseLit;
         if (alpha < 0.001) discard;
         gl_FragColor = vec4(color, alpha);
       }
@@ -1074,7 +1099,7 @@
     const phyloEdgeMat = new THREE.ShaderMaterial({
       vertexShader: phyloEdgeVS, fragmentShader: phyloEdgeFS,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-      uniforms: { uTime: { value: 0 }, uGlobalAlpha: { value: 0 }, uWaveFront: { value: 0 }, uModeDim: { value: 0 } },
+      uniforms: { uTime: { value: 0 }, uGlobalAlpha: { value: 0 }, uWaveFront: { value: 0 }, uModeDim: { value: 0 }, uPulseWaveFront: { value: -1 }, uMaxDist: { value: maxPhyloDistFromOrigin } },
     });
     const phyloEdgeMesh = new THREE.LineSegments(phyloEdgeGeo, phyloEdgeMat);
     worldGroup.add(phyloEdgeMesh);
@@ -1851,6 +1876,10 @@
     let hypothesisIdx = 0;
     let phyloWaveFront = 0;
 
+    // Big-bang pulse state — wavefront gates node/edge visibility
+    const PULSE_SPEED = 0.7;
+    let pulseWaveFront = -1;
+
     // ================================================================
     // ANIMATION LOOP
     // ================================================================
@@ -1870,6 +1899,12 @@
       const dt = Math.min(rawDelta, dtCap);
       globalElapsed += dt;
       phaseTime += dt;
+
+      // Advance pulse wavefront
+      if (pulseWaveFront >= 0) {
+        pulseWaveFront += dt * PULSE_SPEED;
+        if (pulseWaveFront > 1.5) pulseWaveFront = -1;
+      }
 
       const time = globalElapsed;
 
@@ -1937,6 +1972,7 @@
             steadyCyclePhase = 'vowelHarmonyPhase';
             steadyCycleTime = 0;
             spotlightIdx++;
+            pulseWaveFront = 0; // fire big-bang pulse
           }
         }
         else if (steadyCyclePhase === 'vowelHarmonyPhase') {
@@ -1995,6 +2031,7 @@
       phyloEdgeMat.uniforms.uTime.value = time;
       phyloEdgeMat.uniforms.uGlobalAlpha.value = phyloVisible;
       phyloEdgeMat.uniforms.uWaveFront.value = phyloWaveFront;
+      phyloEdgeMat.uniforms.uPulseWaveFront.value = pulseWaveFront;
       overlayEdgeMat.uniforms.uTime.value = time;
       overlayEdgeMat.uniforms.uGlobalAlpha.value = overlayEdgesVisible;
 
@@ -2148,15 +2185,34 @@
         }
 
         ud.currentOpacity += (targetOp - ud.currentOpacity) * Math.min(1, dt * 3);
-        mesh.material.opacity = ud.currentOpacity;
+
+        // Big-bang pulse: gate opacity by radial wavefront, glow at wavefront edge
+        let effectiveOpacity = ud.currentOpacity;
+        let bangBright = 0, bangScale = 1;
+        if (pulseWaveFront >= 0) {
+          const nd = phyloNodes[i].normalizedDist;
+          const wd = pulseWaveFront - nd;
+          const litFactor = Math.max(0, Math.min(1, (wd + 0.04) / 0.14));
+          effectiveOpacity = 0.08 + (ud.currentOpacity - 0.08) * litFactor;
+          if (wd > -0.15 && wd < 0.25) {
+            const g = Math.exp(-wd * wd * 100);
+            bangBright = g * 2.5;
+            bangScale = 1 + g * 0.6;
+          }
+        }
+        mesh.material.opacity = effectiveOpacity;
 
         // Wavefront color warmth + candidate twinkle
         const twinkle = ud.isCandidate
           ? Math.pow(Math.max(0, Math.sin(time * ud.twinkleSpeed + ud.twinkleOffset)), 8)
           : 0;
+
         mesh.material.color.copy(ud.baseColor);
         if (twinkle > 0.001) {
           mesh.material.color.multiplyScalar(1 + twinkle * 1.5 * ud.twinkleBoost);
+        }
+        if (bangBright > 0.001) {
+          mesh.material.color.multiplyScalar(1 + bangBright);
         }
         if (wfGlow > 0.05) {
           mesh.material.color.lerp(COLOR_WAVEFRONT, wfGlow * 0.4);
@@ -2166,9 +2222,9 @@
         if (ud.isCandidate) {
           const pulse = 1 + 0.08 * Math.sin(time * 1.2 + i * 0.7);
           const twinkleScale = 1 + twinkle * 0.15 * ud.twinkleBoost;
-          mesh.scale.setScalar(ud.baseSize * pulse * modeScaleMul * twinkleScale);
+          mesh.scale.setScalar(ud.baseSize * pulse * modeScaleMul * twinkleScale * bangScale);
         } else {
-          mesh.scale.setScalar(ud.baseSize * modeScaleMul);
+          mesh.scale.setScalar(ud.baseSize * modeScaleMul * bangScale);
         }
 
         mesh.position.copy(phyloNodes[i].position);

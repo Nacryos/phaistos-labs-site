@@ -1223,6 +1223,16 @@
     for (let i = 0; i < 80; i++) simulateForces();
     console.log('Layout complete.');
 
+    // Pre-compute each node's distance from origin for pulse wavefront
+    let maxDistFromOrigin = 0;
+    for (const n of graphData.nodes) {
+      n.distFromOrigin = n.position.length();
+      if (n.distFromOrigin > maxDistFromOrigin) maxDistFromOrigin = n.distFromOrigin;
+    }
+    for (const n of graphData.nodes) {
+      n.normalizedDist = maxDistFromOrigin > 0 ? n.distFromOrigin / maxDistFromOrigin : 0;
+    }
+
     // ================================================================
     // SEARCH INDEX + FUZZY SEARCH
     // ================================================================
@@ -1365,6 +1375,10 @@
     });
 
     searchClearBtn.addEventListener('click', () => {
+      // Start collapse for each selected branch independently
+      for (const [, sel] of searchSelections) {
+        startCollapseForSelection(sel);
+      }
       searchSelections.clear();
       searchInput.value = '';
       renderSearchResults();
@@ -1485,7 +1499,8 @@
     function handleRowClick(row) {
       const key = row.dataset.key;
       if (searchSelections.has(key)) {
-        // Deselect
+        // Deselect — start collapse animation before removing
+        startCollapseForSelection(searchSelections.get(key));
         searchSelections.delete(key);
         lastAddedSelectionKey = null;
       } else {
@@ -1696,6 +1711,7 @@
         phase = 'steady';
         phaseTime = 0;
         cascadeTime = 0;
+        pulseWaveFront = -0.8 * PULSE_SPEED; // delayed pulse — lets collapse afterglow show first
         // Reset all to steady state
         const ns = graphData.nodes;
         const es = graphData.edges;
@@ -2021,6 +2037,7 @@
           const fam = btn.dataset.family;
           const key = `family:${fam}`;
           if (searchSelections.has(key)) {
+            startCollapseForSelection(searchSelections.get(key));
             searchSelections.delete(key);
             lastAddedSelectionKey = null;
           } else {
@@ -2284,6 +2301,8 @@
       uniform float uSteadyMix;
       uniform float uGlobalAlpha;
       uniform float uSearchMode;
+      uniform float uPulseWaveFront;
+      uniform float uMaxDist;
 
       varying float vEdgeProgress;
       varying float vFiberAlpha;
@@ -2294,6 +2313,7 @@
       varying float vFiberSpeed;
       varying vec3 vEdgeColor;
       varying float vSearchDim;
+      varying float vPulseLit;
 
       void main() {
         vEdgeProgress = aEdgeProgress;
@@ -2332,6 +2352,16 @@
         float d2 = min(d2a, 1.0 - d2a);
         vFiberAlpha = max(exp(-d1 * d1 * 250.0), exp(-d2 * d2 * 250.0));
 
+        // Big-bang pulse: gate edge visibility by radial wavefront
+        // > -1.0 catches both delay countdown (-1..0) and active pulse (0+)
+        if (uPulseWaveFront > -1.0) {
+          float nd = length(position) / max(uMaxDist, 1.0);
+          float wd = uPulseWaveFront - nd;
+          vPulseLit = smoothstep(-0.04, 0.10, wd);
+        } else {
+          vPulseLit = 1.0;
+        }
+
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `;
@@ -2346,6 +2376,7 @@
       varying float vGlobalAlpha;
       varying vec3 vEdgeColor;
       varying float vSearchDim;
+      varying float vPulseLit;
 
       void main() {
         float baseAlpha = 0.24;
@@ -2371,6 +2402,10 @@
         float searchKeep = 1.0 - vSearchDim;
         alpha *= searchKeep;
         color *= searchKeep;
+
+        // Big-bang pulse: edges only visible behind wavefront
+        alpha *= vPulseLit;
+        color *= vPulseLit;
 
         if (alpha < 0.001) discard;
         gl_FragColor = vec4(color, alpha);
@@ -2423,12 +2458,14 @@
       depthWrite: false,
       blending: THREE.AdditiveBlending,
       uniforms: {
-        uTime:         { value: 0 },
-        uCascadeTime:  { value: 0 },
-        uGrowDuration: { value: EDGE_GROW_DUR },
-        uSteadyMix:    { value: 0 },
-        uGlobalAlpha:  { value: 1 },
-        uSearchMode:   { value: 0 },
+        uTime:           { value: 0 },
+        uCascadeTime:    { value: 0 },
+        uGrowDuration:   { value: EDGE_GROW_DUR },
+        uSteadyMix:      { value: 0 },
+        uGlobalAlpha:    { value: 1 },
+        uSearchMode:     { value: 0 },
+        uPulseWaveFront: { value: -1 },
+        uMaxDist:        { value: maxDistFromOrigin },
       },
     });
 
@@ -2464,6 +2501,41 @@
     let phaseTime = 0;
     let cascadeTime = 0;
     let globalElapsed = 0;
+
+    // Big-bang pulse state — wavefront gates node/edge visibility
+    const PULSE_SPEED = 0.7;        // wavefront speed (normalized-dist/sec, ~1.4s full traverse)
+    let pulseWaveFront = -1;         // -1 = inactive, 0→1+ during pulse
+
+    // Branch collapse animations — exact reverse of BFS cascade startup
+    // Each stores the captured searchCascadeTime and per-node cascadeRevealTimes,
+    // then plays searchCascadeTime backward at the same speed.
+    const collapseAnimations = [];  // [{startTime, capturedTime, nodes, nodeCount}]
+
+    function startCollapseForSelection(sel) {
+      const nodeIndices = getNodeIndicesForSelection(sel);
+      if (nodeIndices.size === 0) return;
+      const ns = graphData.nodes;
+      const nodes = new Map();
+      let maxReveal = 0;
+      for (const ni of nodeIndices) {
+        const rt = ns[ni].cascadeRevealTime;
+        if (rt < 9000) {
+          nodes.set(ni, rt);
+          if (rt > maxReveal) maxReveal = rt;
+        }
+      }
+      if (nodes.size === 0) return;
+      // Use maxRevealTime + buffer as the start clock, NOT raw searchCascadeTime.
+      // This ensures the collapse begins immediately from the "all nodes fully visible"
+      // state, regardless of how long the user sat with search active.
+      const capturedTime = maxReveal + Math.max(NODE_FADE_DUR, 0.5);
+      collapseAnimations.push({
+        startTime: globalElapsed,
+        capturedTime,
+        nodes,
+        nodeCount: nodes.size,
+      });
+    }
 
     function updateEdgeAttributes() {
       const revealAttr = edgeGeo.getAttribute('aRevealTime');
@@ -3216,6 +3288,12 @@
       globalElapsed += dt;
       phaseTime += dt;
 
+      // Advance pulse wavefront (values in -1..0 = countdown delay before pulse fires)
+      if (pulseWaveFront > -1) {
+        pulseWaveFront += dt * PULSE_SPEED;
+        if (pulseWaveFront > 1.5) pulseWaveFront = -1; // done
+      }
+
       let steadyMix, globalAlpha;
 
       // Search mode: per-edge independent cascade → steady transitions (shader-driven)
@@ -3237,7 +3315,13 @@
             if (phaseTime >= startupCascadeDuration) { phase = 'settle'; phaseTime = 0; }
           } else {
             // Single-family cascade — 5s burst then settle back to full colorful state
-            if (phaseTime >= 7) { phase = 'familySettle'; phaseTime = 0; }
+            if (phaseTime >= 7) {
+              // Start afterglow collapse for the highlighted family before transitioning
+              if (cascadeFamily) {
+                startCollapseForSelection({ type: 'family', family: cascadeFamily });
+              }
+              phase = 'familySettle'; phaseTime = 0; pulseWaveFront = 0;
+            }
           }
           break;
         case 'settle':
@@ -3319,6 +3403,54 @@
         renderer.domElement.style.touchAction = 'pan-y';
       }
 
+      // Compute branch collapse — exact reverse of BFS cascade startup
+      // For each collapse, run the same cascade clock backward from capturedTime→0
+      const _collapseOp = new Map();    // nodeIndex → target opacity from collapse
+      const _collapseScale = new Map(); // nodeIndex → scale multiplier from collapse
+      const _collapseGlow = new Map();  // nodeIndex → additive brightness from collapse afterglow
+      for (let ci = collapseAnimations.length - 1; ci >= 0; ci--) {
+        const ca = collapseAnimations[ci];
+        const elapsed = globalElapsed - ca.startTime;
+        const reverseClock = ca.capturedTime - elapsed; // runs backward
+        // Cleanup: when clock has run fully past 0 and all nodes are hidden
+        if (reverseClock < -NODE_FADE_DUR - 0.5) {
+          collapseAnimations.splice(ci, 1);
+          continue;
+        }
+        // Afterglow: density-compensated brightness boost that decays over time.
+        // Larger families (more nodes, sparser distribution) get a stronger per-node
+        // boost so the collective bloom glow matches smaller, denser families.
+        const densityBoost = Math.pow(Math.max(1, ca.nodeCount / 120), 0.5);
+        const glowBase = Math.exp(-elapsed * 1.8) * 2.0 * densityBoost;
+        for (const [ni, revealTime] of ca.nodes) {
+          // Exact same tr computation as the forward animation
+          const tr = reverseClock - revealTime;
+          // Opacity: same formula as search cascade startup
+          let op;
+          if (tr <= 0) {
+            op = 0.08;
+          } else {
+            const fadeIn = Math.min(1, tr / NODE_FADE_DUR);
+            const recency = graphData.nodes[ni].recency || 0;
+            op = 0.08 + fadeIn * (0.85 + recency * 0.15);
+          }
+          // Scale: same formula as search cascade startup
+          let sc;
+          if (tr < 0) sc = 0.3;
+          else if (tr < 0.5) sc = 0.3 + 0.7 * (1 - Math.pow(1 - tr / 0.5, 3));
+          else sc = 1;
+          // Afterglow: only applies while the node is still visible (op > dim threshold)
+          const nodeGlow = op > 0.15 ? glowBase * Math.min(1, (op - 0.08) / 0.77) : 0;
+          // If multiple collapses affect same node, take minimum (most collapsed)
+          const prevOp = _collapseOp.get(ni);
+          if (prevOp === undefined || op < prevOp) _collapseOp.set(ni, op);
+          const prevSc = _collapseScale.get(ni);
+          if (prevSc === undefined || sc < prevSc) _collapseScale.set(ni, sc);
+          const prevGlow = _collapseGlow.get(ni);
+          if (prevGlow === undefined || nodeGlow > prevGlow) _collapseGlow.set(ni, nodeGlow);
+        }
+      }
+
       // Update nodes
       for (let i = 0; i < NODE_COUNT; i++) {
         const node = graphData.nodes[i];
@@ -3366,11 +3498,42 @@
         } // end else (!searchActive)
 
         ud.currentOpacity += (targetOp - ud.currentOpacity) * Math.min(1, dt * 4);
-        mesh.material.opacity = ud.currentOpacity;
+
+        // Big-bang pulse: gate opacity by radial wavefront, glow at wavefront edge
+        // pulseWaveFront > -1 catches both the delay countdown (-1..0) and active pulse (0+)
+        let effectiveOpacity = ud.currentOpacity;
+        let bangBright = 0, bangScale = 1;
+        if (pulseWaveFront > -1) {
+          const nd = node.normalizedDist;
+          const wd = pulseWaveFront - nd;
+          // Lit factor: 0 ahead of wave, 1 behind
+          const litFactor = Math.max(0, Math.min(1, (wd + 0.04) / 0.14));
+          effectiveOpacity = 0.08 + (ud.currentOpacity - 0.08) * litFactor;
+          // Wavefront glow (gaussian peak at wavefront edge)
+          if (wd > -0.15 && wd < 0.25) {
+            const g = Math.exp(-wd * wd * 100);
+            bangBright = g * 2.5;
+            bangScale = 1 + g * 0.6;
+          }
+        }
+        // Branch collapse (reverse BFS) — provides absolute opacity/scale for collapsing nodes.
+        // Collapse OVERRIDES base opacity (not max) so the fade-out is visible even when
+        // the base phase (e.g. 'steady') would set a high opacity.
+        const collapseOp = _collapseOp.get(i);
+        const collapseScMul = _collapseScale.get(i);
+        if (collapseOp !== undefined) {
+          mesh.material.opacity = collapseOp;
+          // Sync the lerp state so there's no pop when the collapse animation ends
+          ud.currentOpacity = collapseOp;
+        } else {
+          mesh.material.opacity = effectiveOpacity;
+        }
 
         const pulse = 1 + 0.04 * Math.sin(globalElapsed * 1.2 + i * 0.5);
         const twinkle = Math.pow(Math.max(0, Math.sin(globalElapsed * ud.twinkleSpeed + ud.twinkleOffset)), 8);
-        mesh.material.color.copy(ud.baseColor).multiplyScalar(1 + twinkle * 2.5 * ud.twinkleBoost);
+
+        const collapseGlowVal = _collapseGlow.get(i) || 0;
+        mesh.material.color.copy(ud.baseColor).multiplyScalar(1 + twinkle * 2.5 * ud.twinkleBoost + bangBright + collapseGlowVal);
         let scaleMul = 1;
         if (searchActive) {
           // Search mode: each node independently cascade-grows based on its own reveal time
@@ -3394,7 +3557,10 @@
         }
         } // end else (!searchActive)
         const twinkleScale = 1 + twinkle * 0.25 * ud.twinkleBoost;
-        mesh.scale.setScalar(ud.baseSize * pulse * scaleMul * twinkleScale);
+        // For collapsing nodes, use the collapse scale (exact reverse of startup);
+        // otherwise use normal scaleMul. bangScale (pulse glow) always stacks.
+        const finalScaleMul = collapseScMul !== undefined ? collapseScMul : scaleMul;
+        mesh.scale.setScalar(ud.baseSize * pulse * finalScaleMul * twinkleScale * bangScale);
         mesh.position.copy(node.position);
       }
 
@@ -3424,6 +3590,7 @@
       edgeMat.uniforms.uGlobalAlpha.value = globalAlpha;
       edgeMat.uniforms.uSearchMode.value = searchActive ? 1.0 : 0.0;
       edgeMat.uniforms.uGrowDuration.value = isFirstCascade ? STARTUP_GROW : EDGE_GROW_DUR;
+      edgeMat.uniforms.uPulseWaveFront.value = pulseWaveFront;
 
       // Update pinned tooltip position (follows node through rotation)
       if (pinnedMesh) {
