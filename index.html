@@ -721,6 +721,32 @@
       border-color: rgba(255, 255, 255, 0.15);
     }
 
+    /* Tablet: slightly smaller title and popups for iPad-sized screens */
+    @media (max-width: 1024px) {
+      #hero-title {
+        font-size: clamp(36px, 5.5vw, 64px);
+      }
+      #hero-subtitle {
+        font-size: clamp(11px, 1.4vw, 15px);
+      }
+      #tooltip {
+        max-width: 340px;
+        min-width: 220px;
+        padding: 12px 16px;
+        font-size: 11.5px;
+        line-height: 1.6;
+      }
+      .tt-header {
+        font-size: 13px;
+      }
+      #graph-info-box {
+        max-width: 380px;
+        min-width: 260px;
+        padding: 16px 20px;
+        font-size: 12px;
+      }
+    }
+
     /* Mobile: keep title left-aligned but compact so graph is visible */
     @media (max-width: 768px) {
       #hero {
@@ -889,8 +915,9 @@
       const scrollY = window.scrollY;
       const vh = window.innerHeight;
 
-      // Scroll-based fade
-      const scrollProgress = Math.min(1, scrollY / (vh * 0.45));
+      // Scroll-based fade — faster on smaller screens so title clears before graph
+      const fadeDist = vh * (window.innerWidth <= 1024 ? 0.25 : 0.35);
+      const scrollProgress = Math.min(1, scrollY / fadeDist);
 
       // Zoom-based fade: 0 at base zoom, 1 when zoomed in significantly
       const zoomDelta = window._graphZoom.base - window._graphZoom.target;
@@ -899,11 +926,8 @@
       // Combined: whichever is stronger hides the hero
       const heroProgress = Math.max(scrollProgress, zoomProgress);
       const heroOpacity = 1 - heroProgress;
-      const heroScale = 1 + heroProgress * 0.08;
       heroTitle.style.opacity = heroOpacity;
-      heroTitle.style.transform = `scale(${heroScale})`;
       heroSubtitle.style.opacity = heroOpacity * 0.8;
-      heroSubtitle.style.transform = `scale(${heroScale * 0.995})`;
       // Scroll indicator: fade out when scrolling toward content, reappear when back at graph
       const scrolledToContent = scrollY > vh * 0.25;
       if (scrolledToContent) {
@@ -1711,7 +1735,7 @@
         phase = 'steady';
         phaseTime = 0;
         cascadeTime = 0;
-        pulseWaveFront = -0.8 * PULSE_SPEED; // delayed pulse — lets collapse afterglow show first
+        pulseWaveFront = -0.55 * PULSE_SPEED; // delayed pulse — lets collapse afterglow show first
         // Reset all to steady state
         const ns = graphData.nodes;
         const es = graphData.edges;
@@ -2266,6 +2290,8 @@
         twinkleSpeed: 0.4 + Math.random() * 0.6,
         twinkleOffset: Math.random() * Math.PI * 2,
         twinkleBoost: 1 + Math.pow((16 - size) / 14, 0.6) * 2,
+        // Larger nodes get dampened twinkle so bloom glow stays proportional
+        sizeDampen: Math.pow(2 / Math.max(2, size), 0.5),
         nodeIndex: node.index,
         langData: {
           id: node.id,
@@ -2294,6 +2320,7 @@
       attribute float aDirection;
       attribute vec3 aColor;
       attribute float aSearchDim;
+      attribute float aCollapseGrowFrac;
 
       uniform float uTime;
       uniform float uCascadeTime;
@@ -2314,6 +2341,7 @@
       varying vec3 vEdgeColor;
       varying float vSearchDim;
       varying float vPulseLit;
+      varying float vBounceGlow;
 
       void main() {
         vEdgeProgress = aEdgeProgress;
@@ -2322,9 +2350,19 @@
         vGlobalAlpha = uGlobalAlpha;
         vEdgeColor = aColor;
         vSearchDim = aSearchDim;
+        vBounceGlow = 0.0;
 
-        // CASCADE GROW
-        float cascadeElapsed = uCascadeTime - aRevealTime;
+        // Edge collapse: aCollapseGrowFrac stores reversed cascade time (>= 0 = collapsing).
+        // The same cascade grow + steady mix logic runs for both forward and reverse —
+        // the only difference is which cascade time drives it.
+        bool isCollapsing = aCollapseGrowFrac >= 0.0;
+        float effectiveCascadeTime = isCollapsing ? aCollapseGrowFrac : uCascadeTime;
+        if (isCollapsing) {
+          vSearchDim = 0.0;   // override search dimming
+        }
+
+        // CASCADE GROW (identical for forward and reverse)
+        float cascadeElapsed = effectiveCascadeTime - aRevealTime;
         float growFrac = clamp(cascadeElapsed / uGrowDuration, 0.0, 1.0);
         growFrac = 1.0 - pow(1.0 - growFrac, 2.5);
         float localProg = aDirection > 0.0 ? aEdgeProgress : 1.0 - aEdgeProgress;
@@ -2333,14 +2371,13 @@
         float tip = exp(-tipDist * tipDist * 300.0) * step(0.0, cascadeElapsed);
         vCascadeAlpha = cascadeElapsed >= 0.0 ? (visible * 0.28 + tip * 0.45) : 0.0;
 
-        // Per-edge steady mix: in search mode, each edge independently transitions
-        // from cascade glow to fiber-optic steady based on its own age
-        if (uSearchMode > 0.5 && aRevealTime < 9000.0 && cascadeElapsed > 0.0) {
+        // Per-edge steady mix: driven by cascade elapsed (works for both forward and reverse)
+        if ((isCollapsing || uSearchMode > 0.5) && aRevealTime < 9000.0 && cascadeElapsed > 0.0) {
           float perEdgeSteady = clamp((cascadeElapsed - 5.0) / 1.5, 0.0, 1.0);
           perEdgeSteady = perEdgeSteady * perEdgeSteady * (3.0 - 2.0 * perEdgeSteady);
-          vSteadyMix = max(uSteadyMix, perEdgeSteady);
+          vSteadyMix = isCollapsing ? perEdgeSteady : max(uSteadyMix, perEdgeSteady);
         } else {
-          vSteadyMix = uSteadyMix;
+          vSteadyMix = isCollapsing ? 0.0 : uSteadyMix;
         }
 
         // FIBER OPTIC — two pulses
@@ -2352,14 +2389,51 @@
         float d2 = min(d2a, 1.0 - d2a);
         vFiberAlpha = max(exp(-d1 * d1 * 250.0), exp(-d2 * d2 * 250.0));
 
-        // Big-bang pulse: gate edge visibility by radial wavefront
-        // > -1.0 catches both delay countdown (-1..0) and active pulse (0+)
+        // Big-bang pulse: collapsing edges stay visible (vPulseLit=1) until
+        // the wavefront actually reaches them, then pulse overrides collapse.
         if (uPulseWaveFront > -1.0) {
           float nd = length(position) / max(uMaxDist, 1.0);
           float wd = uPulseWaveFront - nd;
-          vPulseLit = smoothstep(-0.04, 0.10, wd);
+          float rawPulseLit = smoothstep(-0.04, 0.10, wd);
+          if (isCollapsing) {
+            if (rawPulseLit > 0.5) {
+              // Pulse has reached this edge — override collapse, show normal
+              isCollapsing = false;
+              vPulseLit = rawPulseLit;
+              // Recompute cascade values using the global cascade time
+              float gcElapsed = uCascadeTime - aRevealTime;
+              float gGrowFrac = clamp(gcElapsed / uGrowDuration, 0.0, 1.0);
+              gGrowFrac = 1.0 - pow(1.0 - gGrowFrac, 2.5);
+              float gLocalProg = aDirection > 0.0 ? aEdgeProgress : 1.0 - aEdgeProgress;
+              float gVisible = smoothstep(gLocalProg - 0.01, gLocalProg + 0.01, gGrowFrac);
+              float gTipDist = gGrowFrac - gLocalProg;
+              float gTip = exp(-gTipDist * gTipDist * 300.0) * step(0.0, gcElapsed);
+              vCascadeAlpha = gcElapsed >= 0.0 ? (gVisible * 0.28 + gTip * 0.45) : 0.0;
+              vSteadyMix = uSteadyMix;
+              vSearchDim = aSearchDim;
+            } else {
+              // Pulse hasn't reached yet — collapse retracts normally
+              vPulseLit = 1.0;
+            }
+          } else {
+            vPulseLit = rawPulseLit;
+          }
         } else {
           vPulseLit = 1.0;
+        }
+
+        // Bounce wave: after main pulse hits the sphere edge, a weaker wave
+        // reflects inward briefly. Purely additive glow.
+        if (uPulseWaveFront > 1.0) {
+          float nd = length(position) / max(uMaxDist, 1.0);
+          float bouncePos = 2.0 - uPulseWaveFront; // travels from 1.0 toward 0
+          float bd = bouncePos - nd;
+          // Rapid decay — bounce only affects outer ~20% of sphere
+          float bounceDecay = clamp((nd - 0.75) / 0.25, 0.0, 1.0);
+          // Fade out as bounce travels further from edge
+          float travelFade = clamp((bouncePos - 0.6) / 0.4, 0.0, 1.0);
+          float bg = exp(-bd * bd * 500.0) * 0.38 * bounceDecay * travelFade;
+          vBounceGlow = bg;
         }
 
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -2377,6 +2451,7 @@
       varying vec3 vEdgeColor;
       varying float vSearchDim;
       varying float vPulseLit;
+      varying float vBounceGlow;
 
       void main() {
         float baseAlpha = 0.24;
@@ -2406,6 +2481,10 @@
         // Big-bang pulse: edges only visible behind wavefront
         alpha *= vPulseLit;
         color *= vPulseLit;
+
+        // Bounce wave: additive glow traveling inward after main pulse
+        alpha += vBounceGlow;
+        color += vec3(0.95, 0.88, 0.8) * vBounceGlow;
 
         if (alpha < 0.001) discard;
         gl_FragColor = vec4(color, alpha);
@@ -2451,6 +2530,8 @@
     edgeGeo.setAttribute('aColor',        new THREE.Float32BufferAttribute(eCol, 3));
     const eSearchDim = new Float32Array(graphData.edges.length * SEGMENTS_PER_EDGE * 2);
     edgeGeo.setAttribute('aSearchDim',   new THREE.Float32BufferAttribute(eSearchDim, 1));
+    const eCollapseGF = new Float32Array(graphData.edges.length * SEGMENTS_PER_EDGE * 2).fill(-1.0);
+    edgeGeo.setAttribute('aCollapseGrowFrac', new THREE.Float32BufferAttribute(eCollapseGF, 1));
     const edgeMat = new THREE.ShaderMaterial({
       vertexShader: edgeVS,
       fragmentShader: edgeFS,
@@ -2506,15 +2587,18 @@
     const PULSE_SPEED = 0.7;        // wavefront speed (normalized-dist/sec, ~1.4s full traverse)
     let pulseWaveFront = -1;         // -1 = inactive, 0→1+ during pulse
 
-    // Branch collapse animations — exact reverse of BFS cascade startup
-    // Each stores the captured searchCascadeTime and per-node cascadeRevealTimes,
-    // then plays searchCascadeTime backward at the same speed.
-    const collapseAnimations = [];  // [{startTime, capturedTime, nodes, nodeCount}]
+    // Branch collapse animations — exact reverse of BFS cascade startup.
+    // Captures the cascade time at the moment of deselection and plays the
+    // exact same animation backward: edges retract with tips, cascade glow
+    // reverses through white→steady transition, then edges disappear.
+    const collapseAnimations = [];  // [{startTime, capturedCascadeTime, nodes, edges, nodeCount}]
+    let _edgeCollapseWasActive = false;
 
     function startCollapseForSelection(sel) {
       const nodeIndices = getNodeIndicesForSelection(sel);
       if (nodeIndices.size === 0) return;
       const ns = graphData.nodes;
+      const es = graphData.edges;
       const nodes = new Map();
       let maxReveal = 0;
       for (const ni of nodeIndices) {
@@ -2525,14 +2609,46 @@
         }
       }
       if (nodes.size === 0) return;
-      // Use maxRevealTime + buffer as the start clock, NOT raw searchCascadeTime.
-      // This ensures the collapse begins immediately from the "all nodes fully visible"
-      // state, regardless of how long the user sat with search active.
-      const capturedTime = maxReveal + Math.max(NODE_FADE_DUR, 0.5);
+      // Capture edges: both endpoints in selection and revealed during cascade
+      const edges = new Map();
+      for (let ei = 0; ei < es.length; ei++) {
+        const e = es[ei];
+        if (nodeIndices.has(e.sourceIdx) && nodeIndices.has(e.targetIdx) && e.cascadeRevealTime < 9000) {
+          edges.set(ei, { revealTime: e.cascadeRevealTime, direction: e.cascadeDirection });
+        }
+      }
+      // Capture the actual cascade time — this is the "recorded stage" that gets
+      // played in reverse. Capped at maxReveal + EDGE_GROW_DUR so the reverse
+      // only covers the actual growth animation, not the long steady-state period.
+      // For mature branches: edges flash to cascade glow then immediately retract.
+      // For quick deselects: cap doesn't apply — exact reverse from current state.
+      const rawCascadeTime = searchActive ? searchCascadeTime : cascadeTime;
+      const capturedCascadeTime = Math.min(rawCascadeTime, maxReveal + EDGE_GROW_DUR);
+
+      // Remove overlapping edges/nodes from any existing collapse animations.
+      // This prevents stale collapses (from previous deselects of the same branch)
+      // from fighting the new collapse via the min() operation.
+      for (const ca of collapseAnimations) {
+        for (const ei of edges.keys()) ca.edges.delete(ei);
+        for (const ni of nodes.keys()) ca.nodes.delete(ni);
+      }
+      // Clean up collapses that lost all content
+      for (let ci = collapseAnimations.length - 1; ci >= 0; ci--) {
+        const ca = collapseAnimations[ci];
+        if (ca.nodes.size === 0 && (!ca.edges || ca.edges.size === 0)) {
+          collapseAnimations.splice(ci, 1);
+        }
+      }
+
+      // Speed up reverse playback for large branches so collapse feels snappy.
+      // Target ~2s total reverse time; small branches play at 1x (no speedup).
+      const collapseSpeed = Math.max(1, capturedCascadeTime / 2.0);
       collapseAnimations.push({
         startTime: globalElapsed,
-        capturedTime,
+        capturedCascadeTime,
+        collapseSpeed,
         nodes,
+        edges,
         nodeCount: nodes.size,
       });
     }
@@ -3291,7 +3407,7 @@
       // Advance pulse wavefront (values in -1..0 = countdown delay before pulse fires)
       if (pulseWaveFront > -1) {
         pulseWaveFront += dt * PULSE_SPEED;
-        if (pulseWaveFront > 1.5) pulseWaveFront = -1; // done
+        if (pulseWaveFront > 1.36) pulseWaveFront = -1; // done (slight extension for bounce)
       }
 
       let steadyMix, globalAlpha;
@@ -3320,7 +3436,7 @@
               if (cascadeFamily) {
                 startCollapseForSelection({ type: 'family', family: cascadeFamily });
               }
-              phase = 'familySettle'; phaseTime = 0; pulseWaveFront = 0;
+              phase = 'familySettle'; phaseTime = 0; pulseWaveFront = -0.55 * PULSE_SPEED;
             }
           }
           break;
@@ -3410,9 +3526,9 @@
       const _collapseGlow = new Map();  // nodeIndex → additive brightness from collapse afterglow
       for (let ci = collapseAnimations.length - 1; ci >= 0; ci--) {
         const ca = collapseAnimations[ci];
-        const elapsed = globalElapsed - ca.startTime;
-        const reverseClock = ca.capturedTime - elapsed; // runs backward
-        // Cleanup: when clock has run fully past 0 and all nodes are hidden
+        const elapsed = (globalElapsed - ca.startTime) * ca.collapseSpeed;
+        const reverseClock = ca.capturedCascadeTime - elapsed; // runs backward from captured stage
+        // Cleanup: when clock has run fully past 0 and all nodes/edges are hidden
         if (reverseClock < -NODE_FADE_DUR - 0.5) {
           collapseAnimations.splice(ci, 1);
           continue;
@@ -3423,6 +3539,18 @@
         const densityBoost = Math.pow(Math.max(1, ca.nodeCount / 120), 0.5);
         const glowBase = Math.exp(-elapsed * 1.8) * 2.0 * densityBoost;
         for (const [ni, revealTime] of ca.nodes) {
+          // Skip nodes that are currently highlighted — prevents old collapses
+          // from fighting new cascades when the same branch is re-selected
+          if (searchActive && searchHighlightedNodes.has(ni)) continue;
+          // Once pulse wavefront has passed this node, permanently remove it
+          // from the collapse so it stays in its pulse-lit state
+          if (pulseWaveFront > 0) {
+            const nd = graphData.nodes[ni].normalizedDist;
+            if (pulseWaveFront - nd > 0.10) {
+              ca.nodes.delete(ni);
+              continue;
+            }
+          }
           // Exact same tr computation as the forward animation
           const tr = reverseClock - revealTime;
           // Opacity: same formula as search cascade startup
@@ -3449,6 +3577,65 @@
           const prevGlow = _collapseGlow.get(ni);
           if (prevGlow === undefined || nodeGlow > prevGlow) _collapseGlow.set(ni, nodeGlow);
         }
+      }
+
+      // Edge collapse — write reversed cascade time to aCollapseGrowFrac.
+      // The shader reuses the exact same cascade grow + tip + steady logic,
+      // just with a decreasing cascade time → edges retract from outskirts inward.
+      const _hasEdgeCollapse = collapseAnimations.some(ca => ca.edges && ca.edges.size > 0);
+      if (_hasEdgeCollapse || _edgeCollapseWasActive) {
+        const cgfAttr = edgeGeo.getAttribute('aCollapseGrowFrac');
+        const revealAttr = edgeGeo.getAttribute('aRevealTime');
+        const dirAttr = edgeGeo.getAttribute('aDirection');
+        cgfAttr.array.fill(-1.0);  // -1 = not collapsing (sentinel)
+        let revealDirDirty = false;
+        if (_hasEdgeCollapse) {
+          for (const ca of collapseAnimations) {
+            if (!ca.edges) continue;
+            const elapsed = (globalElapsed - ca.startTime) * ca.collapseSpeed;
+            const reverseCascadeTime = ca.capturedCascadeTime - elapsed;
+            for (const [ei, ed] of ca.edges) {
+              // Skip edges that are currently highlighted — prevents old collapses
+              // from fighting new cascades when the same branch is re-selected
+              if (searchActive && searchHighlightedEdges.has(ei)) continue;
+              // Once pulse wavefront has passed this edge, permanently remove it
+              // from the collapse so it stays in its pulse-lit state
+              if (pulseWaveFront > 0) {
+                const e = graphData.edges[ei];
+                const srcDist = graphData.nodes[e.sourceIdx].normalizedDist;
+                const tgtDist = graphData.nodes[e.targetIdx].normalizedDist;
+                const edgeDist = Math.max(srcDist, tgtDist);
+                if (pulseWaveFront - edgeDist > 0.10) {
+                  ca.edges.delete(ei);
+                  continue;
+                }
+              }
+              const baseVi = ei * SEGMENTS_PER_EDGE * 2;
+              for (let s = 0; s < SEGMENTS_PER_EDGE * 2; s++) {
+                const prev = cgfAttr.array[baseVi + s];
+                // Write reversed cascade time (lower = more retracted); take minimum
+                if (prev < 0 || reverseCascadeTime < prev) {
+                  cgfAttr.array[baseVi + s] = reverseCascadeTime;
+                }
+                // Restore original reveal time and direction so the shader
+                // can compute the exact same cascade grow animation in reverse
+                revealAttr.array[baseVi + s] = ed.revealTime;
+                dirAttr.array[baseVi + s] = ed.direction;
+              }
+              revealDirDirty = true;
+            }
+          }
+        }
+        cgfAttr.needsUpdate = true;
+        if (revealDirDirty) {
+          revealAttr.needsUpdate = true;
+          dirAttr.needsUpdate = true;
+        }
+        // When collapse ends, restore edge attributes to current state
+        if (!_hasEdgeCollapse && _edgeCollapseWasActive) {
+          updateEdgeAttributes();
+        }
+        _edgeCollapseWasActive = _hasEdgeCollapse;
       }
 
       // Update nodes
@@ -3515,25 +3702,43 @@
             bangBright = g * 2.5;
             bangScale = 1 + g * 0.6;
           }
+          // Bounce wave: brief glow reflecting inward, only outer nodes
+          if (pulseWaveFront > 1.0) {
+            const bouncePos = 2.0 - pulseWaveFront;
+            const bd = bouncePos - nd;
+            const bounceDecay = Math.max(0, Math.min(1, (nd - 0.75) / 0.25));
+            const travelFade = Math.max(0, Math.min(1, (bouncePos - 0.6) / 0.4));
+            const bg = Math.exp(-bd * bd * 500) * bounceDecay * travelFade;
+            bangBright += bg * 1.0;
+            bangScale = Math.max(bangScale, 1 + bg * 0.25);
+          }
         }
         // Branch collapse (reverse BFS) — provides absolute opacity/scale for collapsing nodes.
         // Collapse OVERRIDES base opacity (not max) so the fade-out is visible even when
         // the base phase (e.g. 'steady') would set a high opacity.
+        // EXCEPTION: if pulse wavefront has passed this node, pulse takes priority.
         const collapseOp = _collapseOp.get(i);
         const collapseScMul = _collapseScale.get(i);
-        if (collapseOp !== undefined) {
+        const pulseLitFactor = (pulseWaveFront > -1) ? Math.max(0, Math.min(1, ((pulseWaveFront - node.normalizedDist) + 0.04) / 0.14)) : -1;
+        const pulseOverridesCollapse = collapseOp !== undefined && pulseLitFactor > 0.5;
+        if (collapseOp !== undefined && !pulseOverridesCollapse) {
           mesh.material.opacity = collapseOp;
           // Sync the lerp state so there's no pop when the collapse animation ends
           ud.currentOpacity = collapseOp;
         } else {
+          if (pulseOverridesCollapse) {
+            // Smoothly recover from collapsed opacity to pulse-gated opacity
+            ud.currentOpacity += (targetOp - ud.currentOpacity) * Math.min(1, dt * 8);
+            effectiveOpacity = 0.08 + (ud.currentOpacity - 0.08) * pulseLitFactor;
+          }
           mesh.material.opacity = effectiveOpacity;
         }
 
         const pulse = 1 + 0.04 * Math.sin(globalElapsed * 1.2 + i * 0.5);
         const twinkle = Math.pow(Math.max(0, Math.sin(globalElapsed * ud.twinkleSpeed + ud.twinkleOffset)), 8);
 
-        const collapseGlowVal = _collapseGlow.get(i) || 0;
-        mesh.material.color.copy(ud.baseColor).multiplyScalar(1 + twinkle * 2.5 * ud.twinkleBoost + bangBright + collapseGlowVal);
+        const collapseGlowVal = pulseOverridesCollapse ? 0 : (_collapseGlow.get(i) || 0);
+        mesh.material.color.copy(ud.baseColor).multiplyScalar(1 + twinkle * 2.5 * ud.twinkleBoost * ud.sizeDampen + bangBright + collapseGlowVal);
         let scaleMul = 1;
         if (searchActive) {
           // Search mode: each node independently cascade-grows based on its own reveal time
@@ -3556,10 +3761,10 @@
           scaleMul = 0.7;
         }
         } // end else (!searchActive)
-        const twinkleScale = 1 + twinkle * 0.25 * ud.twinkleBoost;
+        const twinkleScale = 1 + twinkle * 0.25 * ud.twinkleBoost * ud.sizeDampen;
         // For collapsing nodes, use the collapse scale (exact reverse of startup);
-        // otherwise use normal scaleMul. bangScale (pulse glow) always stacks.
-        const finalScaleMul = collapseScMul !== undefined ? collapseScMul : scaleMul;
+        // unless pulse has overridden the collapse. bangScale (pulse glow) always stacks.
+        const finalScaleMul = (collapseScMul !== undefined && !pulseOverridesCollapse) ? collapseScMul : scaleMul;
         mesh.scale.setScalar(ud.baseSize * pulse * finalScaleMul * twinkleScale * bangScale);
         mesh.position.copy(node.position);
       }
