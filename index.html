@@ -7,8 +7,26 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --paper: #E2DDD4;
+      --paper-deep: #D8D1C4;
+      --foxing: #C4B8A5;
+      --ink: #1A1A1A;
+      --ink-2: #5A5A58;
+      --sage: #7A9A7E;
+      --sage-deep: #5C7E60;
+      --rose: #B0737A;
+      --ochre: #C4A85C;
+      --sepia: #7A5C3C;
+      --highlight: #F5D76E;
+      --grid-line: #D0CAC0;
+      --cyan: #4A7A9A;
+      --serif: 'EB Garamond', Georgia, 'Times New Roman', serif;
+      --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --mono: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html {
       scrollbar-width: none;
@@ -16,9 +34,9 @@
     }
     html::-webkit-scrollbar { display: none; }
     body {
-      background: #000;
-      color: #fff;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       overflow-x: hidden;
