@@ -2526,7 +2526,7 @@
       varying float vBounceGlow;
 
       void main() {
-        float baseAlpha = 0.84;
+        float baseAlpha = 0.92;
         float fiberBoost = vFiberAlpha * 0.6;
         float steadyAlpha = baseAlpha + fiberBoost;
 
@@ -2573,7 +2573,7 @@
       // Edge color from source node's family
       const srcFamily = graphData.nodes[edge.sourceIdx].family;
       const fc = FAMILY_COLORS[srcFamily] || [0.0, 0.8, 0.5];
-      _tmpEdgeColor.setHSL(0.07, 0.40, 0.18);
+      _tmpEdgeColor.setHSL(fc[0], 0.62, 0.29);
       _tmpEdgeColor.multiplyScalar(1.0);
       for (let s = 0; s < SEGMENTS_PER_EDGE; s++) {
         const t0 = s / SEGMENTS_PER_EDGE;

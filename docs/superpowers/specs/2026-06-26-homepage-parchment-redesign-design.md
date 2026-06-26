@@ -92,3 +92,7 @@ User feedback: the muted-ink graph read as "very faded, not striking." Direction
 - **Graph (shipped):** warm vellum scene background `#E7DEC6`; family palette swapped to a `VOYNICH_PIGMENTS` HSL set (nodes carry pigment, revealed on close inspection); **edges are bold iron-gall brown** `setHSL(0.07, 0.40, 0.18)` with `baseAlpha 0.84` — a dark, dense, near-monochrome ink web (the Voynich pen-drawing look). Node sizes back to original.
 - **Content (shipped):** **no headings, no pillar grid** — replaced with four flowing manifesto paragraphs (evocative, minimalist) followed by the status tag, PhaiPhon CTA, and contact line.
 - Page chrome (parchment `#E2DDD4`, serif/mono type, panels) unchanged.
+
+## 10. Revision 3 — vivid pigment edges + bolder (2026-06-26)
+
+Further graph tuning on two axes the user selected (boldness + color). The bold mono iron-gall web read as too monochrome; user chose **vivid pigments** and **bolder/denser**. Boldness is achieved via opacity/density (not darkening, which would mute color). Shipped: edges colored per family Voynich pigment, saturated — `_tmpEdgeColor.setHSL(fc[0], 0.62, 0.29)` — at `baseAlpha 0.92`. The web reads as a rich, saturated illuminated-manuscript constellation while staying dense and present. Nodes still carry pigment; warm vellum background `#E7DEC6` retained.
