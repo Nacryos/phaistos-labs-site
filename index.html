@@ -928,7 +928,6 @@
       <p>We treat each decipherment as one instance of a larger question: how much of a lost mind can be reconstructed from its traces alone? The work is patient, versioned, and falsifiable. We publish what holds, and retract what does not.</p>
       <p>Our first frontier is Minoan Linear A &mdash; the last major undeciphered script of the Bronze Age Mediterranean, the written voice of the civilization remembered as Plato&rsquo;s Atlantis. It is not yet read. That honesty is the method, not a disclaimer.</p>
       <p>If a dead language can be recovered from structure alone, so can other lost knowledge. We are building toward humanistic models that reason about the human record with the rigor we reserve for the natural world.</p>
-      <p class="status-tag">NOT YET DECIPHERED &middot; v0 &middot; OPEN</p>
 
       <div class="contact">For more information, reach out to <a href="mailto:alvinxyz@stanford.edu">alvinxyz@stanford.edu</a>, <a href="mailto:aaronbao@berkeley.edu">aaronbao@berkeley.edu</a>, or <a href="mailto:kyriacos@stanford.edu">kyriacos@stanford.edu</a></div>
     </div>
@@ -2348,7 +2347,7 @@
 
       // Size: descendant-based (blot footprint a bit larger than the old dot)
       const size = 2.0 + Math.pow(exp, 1.2) * 14;
-      const blotSize = size * 2.0;
+      const blotSize = size * 0.85;
 
       const mat = new THREE.SpriteMaterial({
         map: nodeBlotTex,
@@ -2581,14 +2580,24 @@
       // Edge color from source node's family
       const srcFamily = graphData.nodes[edge.sourceIdx].family;
       const fc = FAMILY_COLORS[srcFamily] || [0.0, 0.8, 0.5];
-      _tmpEdgeColor.setHSL(fc[0], 0.62, 0.29);
-      _tmpEdgeColor.multiplyScalar(1.0);
+      // Restrained, darker ink tint (the stroke pass darkens it toward iron-gall).
+      _tmpEdgeColor.setHSL(fc[0], 0.35, 0.22);
+      // Gentle hand-drawn bow: bow the midline perpendicular to the edge.
+      const dx = b.x-a.x, dy = b.y-a.y, dz = b.z-a.z;
+      const len = Math.hypot(dx, dy, dz) || 1;
+      let px = -dz, py = 0, pz = dx, pl = Math.hypot(px, py, pz);
+      if (pl < 1e-3) { px = 1; py = 0; pz = 0; pl = 1; }
+      px /= pl; py /= pl; pz /= pl;
+      const bow = len * 0.14 * (edge.phaseOffset - 0.5) * 2.0;
+      const bx = (t) => a.x + dx*t + px*bow*Math.sin(t*Math.PI);
+      const by = (t) => a.y + dy*t + py*bow*Math.sin(t*Math.PI);
+      const bz = (t) => a.z + dz*t + pz*bow*Math.sin(t*Math.PI);
       for (let s = 0; s < SEGMENTS_PER_EDGE; s++) {
         const t0 = s / SEGMENTS_PER_EDGE;
         const t1 = (s + 1) / SEGMENTS_PER_EDGE;
         ePos.push(
-          a.x+(b.x-a.x)*t0, a.y+(b.y-a.y)*t0, a.z+(b.z-a.z)*t0,
-          a.x+(b.x-a.x)*t1, a.y+(b.y-a.y)*t1, a.z+(b.z-a.z)*t1
+          bx(t0), by(t0), bz(t0),
+          bx(t1), by(t1), bz(t1)
         );
         ePhase.push(edge.phaseOffset, edge.phaseOffset);
         eFiber.push(edge.fiberSpeed, edge.fiberSpeed);
@@ -2642,7 +2651,7 @@
       const ctx = c.getContext('2d'), cx = s/2, cy = s/2;
       const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, s*0.5);
       g.addColorStop(0, 'rgba(255,255,255,1)');
-      g.addColorStop(0.35, 'rgba(255,255,255,0.55)');
+      g.addColorStop(0.6, 'rgba(255,255,255,0.92)');
       g.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, s, s);
@@ -2652,21 +2661,35 @@
       transparent: true, depthWrite: false, blending: THREE.NormalBlending,
       uniforms: {
         uMap: { value: makeSoftTexture() },
-        uSize: { value: 18.0 },
-        uOpacity: { value: 0.30 },
+        uSize: { value: 26.0 },
+        uOpacity: { value: 0.65 },
         uGlobalAlpha: { value: 1.0 },
+        uCascadeTime: { value: 0.0 },
+        uGrowDuration: { value: 1.0 },
       },
       vertexShader: `
         attribute vec3 aColor;
         attribute float aSearchDim;
+        attribute float aEdgeProgress;
+        attribute float aRevealTime;
+        attribute float aDirection;
         uniform float uSize;
+        uniform float uCascadeTime;
+        uniform float uGrowDuration;
         varying vec3 vColor;
         varying float vSearchDim;
+        varying float vReveal;
         void main() {
           vColor = aColor;
           vSearchDim = aSearchDim;
+          float cascadeElapsed = uCascadeTime - aRevealTime;
+          float growFrac = clamp(cascadeElapsed / uGrowDuration, 0.0, 1.0);
+          growFrac = 1.0 - pow(1.0 - growFrac, 2.5);
+          float localProg = aDirection > 0.0 ? aEdgeProgress : 1.0 - aEdgeProgress;
+          vReveal = cascadeElapsed >= 0.0 ? smoothstep(localProg - 0.02, localProg + 0.02, growFrac) : 0.0;
+          float taper = 0.62 + 0.38 * sin(aEdgeProgress * 3.14159265);
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = uSize * (400.0 / -mv.z);
+          gl_PointSize = uSize * taper * (400.0 / -mv.z);
           gl_Position = projectionMatrix * mv;
         }
       `,
@@ -2676,11 +2699,13 @@
         uniform float uGlobalAlpha;
         varying vec3 vColor;
         varying float vSearchDim;
+        varying float vReveal;
         void main() {
           float a = texture2D(uMap, gl_PointCoord).a;
-          a *= uOpacity * uGlobalAlpha * (1.0 - vSearchDim);
+          a *= uOpacity * uGlobalAlpha * vReveal * (1.0 - vSearchDim);
           if (a < 0.01) discard;
-          gl_FragColor = vec4(vColor, a);
+          vec3 ink = mix(vec3(0.13, 0.10, 0.07), vColor, 0.30);
+          gl_FragColor = vec4(ink, a);
         }
       `,
     });
@@ -3928,6 +3953,8 @@
       edgeMat.uniforms.uSteadyMix.value = steadyMix;
       edgeMat.uniforms.uGlobalAlpha.value = globalAlpha;
       stampMat.uniforms.uGlobalAlpha.value = globalAlpha;
+      stampMat.uniforms.uCascadeTime.value = cascadeTime;
+      stampMat.uniforms.uGrowDuration.value = isFirstCascade ? STARTUP_GROW : EDGE_GROW_DUR;
       edgeMat.uniforms.uSearchMode.value = searchActive ? 1.0 : 0.0;
       edgeMat.uniforms.uGrowDuration.value = isFirstCascade ? STARTUP_GROW : EDGE_GROW_DUR;
       edgeMat.uniforms.uPulseWaveFront.value = pulseWaveFront;
