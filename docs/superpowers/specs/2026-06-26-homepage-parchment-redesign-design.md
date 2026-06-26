@@ -1,166 +1,86 @@
-# Phaistos Labs — Homepage Parchment Redesign (Design Spec)
+# Phaistos Labs — Homepage Parchment Re-theme (Design Spec)
 
 **Status:** Draft — pending user review
-**Date:** 2026-06-26
-**Repo:** `~/Developer/phaistos-labs-site` (canonical, GitHub remote `origin` → Nacryos/phaistos-labs-site)
+**Date:** 2026-06-26 (revised after pivot)
+**Repo / branch:** `~/Developer/phaistos-labs-site` on `redesign/homepage-parchment`
 **Design source:** `~/Documents/Claude/Projects/Phaistos Labs/phaistos-labs-style-guide.md`
 
----
+> **Revision note.** An earlier version of this spec proposed replacing the 3D graph with a paper-airplane flock. The user reversed that: **keep the 3D language graph, re-skinned to the parchment/ink aesthetic.** This document supersedes that approach entirely. No paper airplanes; no `explore/` archive.
 
-## 1. Context & Goals
+## 1. Goal
 
-The current homepage is a dark, sci-fi single-file site: pure black, white text, warm-orange glow, glassmorphism, Inter font, dominated by a full-screen Three.js phylogenetic language graph (1,926 nodes) with a Ctrl+K search. It is impressive but reads as a tech demo, not a clearly-structured AI lab, and it is the **opposite** of the brand style guide.
+Re-theme the existing homepage (`index.html`, a single ~3,829-line static file with inline CSS and an inline Three.js graph) from its current **dark sci-fi** look to the **light parchment / naturalist-scholarly** aesthetic of the style guide, while:
+1. **Keeping the 3D phylogenetic language graph** as the centerpiece — re-skinned to parchment/ink (light background, muted earthy-ink nodes, faint sepia edges, **no bloom glow**).
+2. **Keeping the graph's interactions** (Ctrl+K search, hover tooltips, selection leader-labels, the graph-info modal) — re-themed, not removed.
+3. **Restructuring the page** into clearer high-level sections for an AI lab and adding a short **temporary mission statement**.
 
-This redesign rebuilds the **homepage only** to two goals from the user:
+## 2. Decisions Locked
 
-1. **High-level, clear, structured** presentation for an AI lab — minimalist but interesting. Design-motion inspiration: **"flapping airplanes"** (a flock of paper airplanes — boids/emergence, which doubles as a perfect AI metaphor and literal "archival paper").
-2. **New aesthetic from the style guide:** light/parchment, naturalist-scholarly, transitional serif + humanist sans, muted botanical accents. Explicitly *anti* dark-mode/neon/glow.
+- Keep the graph; **re-skin it to parchment/ink** (not dark, not the warm-glow palette).
+- Theme + restructure + new mission (all three), in-place on `index.html`.
+- No paper-airplane flock. No `explore/` preservation (the graph stays where it is).
+- Light/parchment only; no dark mode toggle.
+- Keep search/tooltip/leader-labels/graph-info, re-themed.
 
-## 2. Decisions Locked (from brainstorming)
+## 3. Design System (from the style guide)
 
-- **Full parchment redesign** (style guide is the aesthetic authority).
-- **Homepage first.** PhaiPhon and a future Approach page are out of scope this pass.
-- Build in the **cloned canonical repo** (`~/Developer/phaistos-labs-site`).
-- I **draft a short, high-level mission statement** as a placeholder (the existing dense technical version is replaced on the homepage).
-- The dark 3D neural graph is **replaced** by the paper-airplane flock as the ambient backdrop.
-
-## 3. Non-Goals (deferred)
-
-- Restyling PhaiPhon (`phaiphon/`) — untouched this pass.
-- Building a live `/explore` page UI/nav — we only *preserve* the old homepage as an unlinked file.
-- Restyling/porting the Approach manifesto page (it lives only in the other local copy).
-- A dark-mode toggle. The site is light/parchment only; dark is reserved for a future opt-in `/explore`.
-- New interactive instruments or changes to `language_data.js` / `phaiphon_data.js`.
-
-## 4. Aesthetic & Design System (mapped from the style guide)
-
-**Mode:** Light / parchment only. Never pure black for text. Muted, desaturated, organic. No bloom, no neon, no sharp digital gradients, no stock imagery, no decorative borders, no "ancient/mystical" clichés.
-
-### Color tokens (CSS custom properties on `:root`)
+Introduce a `:root` token block (none exists today — colors are hardcoded) and migrate the theme to it.
 
 | Token | Hex | Role |
 |-------|-----|------|
-| `--paper` | `#E2DDD4` | Primary surface |
-| `--paper-deep` | `#D8D1C4` | Aged / alternate band |
-| `--foxing` | `#C4B8A5` | Texture spots only (3–5% opacity) |
+| `--paper` | `#E2DDD4` | Primary surface / scene background |
+| `--paper-deep` | `#D8D1C4` | Panels, alternate bands |
+| `--foxing` | `#C4B8A5` | Borders, texture |
 | `--ink` | `#1A1A1A` | Text primary (never `#000`) |
-| `--ink-2` | `#5A5A58` | Text secondary / captions |
-| `--sage` | `#7A9A7E` | **Signature accent** |
-| `--sage-deep` | `#5C7E60` | Accent depth / hover |
-| `--rose` | `#B0737A` | Links & CTAs (interactive) |
+| `--ink-2` | `#5A5A58` | Secondary text |
+| `--sage` | `#7A9A7E` | Signature accent |
+| `--sage-deep` | `#5C7E60` | Accent depth / link hover |
+| `--rose` | `#B0737A` | Links, CTAs, **graph selection/highlight** |
 | `--ochre` | `#C4A85C` | Warm accent, sparing |
-| `--sepia` | `#7A5C3C` | Flock ink, mono transliteration text, hatching |
-| `--highlight` | `#F5D76E` | Callout highlight, very sparing |
-| `--grid-line` | `#D0CAC0` | Notebook grid lines |
+| `--sepia` | `#7A5C3C` | Graph nodes/edges base, mono label text, hatching |
+| `--highlight` | `#F5D76E` | Callout, very sparing |
+| `--grid-line` | `#D0CAC0` | Notebook grid |
 
-### Typography (Google Fonts)
+**Type:** display/headings = `'EB Garamond'` serif; body/UI = `'Inter'`; mono/labels/transliteration = `'IBM Plex Mono'` (replaces the current Courier New stack). Headings line-height ≤1.3; body ≥1.5; uppercase labels letter-spacing ≥0.05em. Never `#000`/`#fff` for text.
 
-- **Display / headings:** **EB Garamond** (transitional serif). H1 hero `clamp(2.5rem, 6vw, 4.5rem)`; section H2 `clamp(1.5rem, 3vw, 1.9rem)`. Line-height **1.3**.
-- **Body / UI:** **Inter**. 16–18px, line-height **1.5**.
-- **Mono / data:** **IBM Plex Mono**. Eyebrows, status tags, sign values, metadata; 13–15px, color `--sepia` or `--ink-2`.
-- Uppercase eyebrows/labels: letter-spacing **+0.05em**.
+**Surfaces:** replace glassmorphism (`rgba(5,5,7,x)` + heavy blur) with near-solid parchment panels (`--paper-deep`) and `--foxing` hairline borders; keep at most a very light blur. No neon, no glow.
 
-### Texture & layout
+## 4. Graph Re-skin (the hard part)
 
-- Single large parchment sheet feel: `--paper` base + a subtle grain at **5–10%** opacity (CSS — a tiled-but-low SVG/`feTurbulence` noise data-URI or a single large layer; never an obvious repeat).
-- Optional faint foxing spots (`--foxing`, 3–5%) for depth, never over text.
-- **Notebook grid** (thin `--grid-line`) reserved for the structured "pillars" band only, as a nod to the lab-notebook motif.
-- Composition: center-weighted, generous negative space (≥40% breathing room in hero), content column `max-width: 680–720px`, ≥10% page margins, illustrations/elements never bleed to the edge.
+The current pipeline assumes dark + bloom + bright nodes. The re-skin inverts it:
 
-## 5. Information Architecture (sections, in DOM order)
+- **Scene background** `#000000` → `--paper` `#E2DDD4` (Three.js `scene.background`).
+- **Remove bloom:** delete `UnrealBloomPass` (and any `bloomPass` references in resize); keep `EffectComposer` + `RenderPass` and `composer.render()`.
+- **Nodes:** keep family-hue differentiation but force a **muted, dark** tone so nodes read as earthy tinted ink on parchment — set each family color via `setHSL(hue, ~0.30, ~0.40)` (ignore the original high S/L), drop the lerp-toward-cream, and remove the white-ward brightness boost. Per-frame twinkle/pulse overdrive (which relied on bloom to compress) is neutralized — node color stays dark; emphasis comes from opacity/scale, not whitening.
+- **Edges:** `AdditiveBlending` → `NormalBlending`; edge base color = faint `--sepia`; bump base alpha for visibility on light bg; recolor the shader's hardcoded near-white pulse colors (`vec3(1.0,0.88,0.75)` etc.) to sepia/ink; the additive bounce-glow term becomes a subtle sepia darkening, not a white add.
+- **Selection / search highlight / hover:** use `--rose` (dusty rose) for the emphasized node/edge state, replacing the warm-orange accent.
+- **Particles** (if present): ink/sepia instead of reddish.
 
-A single scrolling page, ~3 viewports, clearly sectioned.
+This is tuning-heavy and **must be verified visually** (run the page, screenshot, iterate) — not by diff alone. Concrete starting values are in the plan; expect 1–2 visual iterations.
 
-### 5.1 Backdrop (fixed, behind all content)
-The paper-airplane flock canvas (see §6). Sits at the same layer the old graph occupied.
+## 5. Content Restructure + Mission
 
-### 5.2 Hero (full viewport)
-- **Eyebrow** (mono, uppercase, `--ink-2`): `PHAISTOS LABS`
-- **Display thesis** (EB Garamond, large, `--ink`): *“We teach machines to read what no one living can.”* `[PLACEHOLDER — refine]`
-- **Descriptor** (Inter, `--ink-2`): “A frontier AI lab working where machine intelligence meets the humanities.”
-- **Scroll cue** (mono, `--ink-2`): `↓ the mission`
+Replace the single dense "Our Mission" block with clearer high-level sections (the graph remains the scrolling backdrop / hero):
 
-### 5.3 Mission (the drafted temporary statement)
-Clean reading column over a solid/near-solid parchment band (flock dims behind for legibility).
-- **H2:** `Mission`
-- **Body** `[PLACEHOLDER — refine]`:
-  > Phaistos Labs builds AI that recovers lost human knowledge. We begin with the undeciphered scripts of the ancient world — reconstructing languages from structure alone, without training data — and treat each decipherment as a step toward a general science of humanistic inference. The work is versioned, falsifiable, and open.
+1. **Hero** — eyebrow `Phaistos Labs`; serif thesis (placeholder) `We teach machines to read what no one living can.`; descriptor `A frontier AI lab working where machine intelligence meets the humanities.`
+2. **Mission** (the temporary statement, placeholder): *“Phaistos Labs builds AI that recovers lost human knowledge. We begin with the undeciphered scripts of the ancient world — reconstructing languages from structure alone, without training data — and treat each decipherment as a step toward a general science of humanistic inference. The work is versioned, falsifiable, and open.”*
+3. **What we do** — three pillars: **Recover / Generalize / Open**.
+4. **Focus: Linear A** — keep the substance of the existing detailed mission text here; status tag `NOT YET DECIPHERED · v0 · OPEN`; CTA `See the instrument — PhaiPhon →`.
+5. **Contact** — the three existing mailto links, re-themed.
 
-### 5.4 What we do (three structured pillars)
-On a subtle notebook-grid band. Three "specimen + label" cards, generous spacing:
-- **Recover** — Reconstruct lost languages and knowledge from structure alone.
-- **Generalize** — Turn each decipherment into a general method for humanistic inference.
-- **Open** — Versioned, falsifiable, and shared.
+Headings → EB Garamond; the content overlay gradient (currently fading to `#000`) fades to `--paper`.
 
-### 5.5 Focus: Linear A (flagship project → PhaiPhon)
-- **H2:** `Our first frontier — Linear A`
-- **Body:** “Minoan Linear A is the last major undeciphered script of the Bronze Age Mediterranean. We are reading it — not by analogy or guesswork, but by inducing its sound values from the structure of the world's languages.”
-- **Status tag** (mono, on `--paper-deep` pill): `NOT YET DECIPHERED · v0 · OPEN`
-- **CTA** (rose pill link → `phaiphon/index.html`): `See the instrument — PhaiPhon →`
+## 6. Out of Scope
 
-### 5.6 Contact
-- Secondary text: “Reach us at alvinxyz@stanford.edu, aaronbao@berkeley.edu, or kyriacos@stanford.edu.” (mailto links in `--rose`).
+- PhaiPhon (`phaiphon/`) restyling. Approach page. Dark mode. Changing graph data / physics / layout. New instruments.
 
-### 5.7 Footer
-- Minimal: mono wordmark `PHAISTOS LABS` + year. No heavy chrome.
+## 7. Verification
 
-### 5.8 Navigation (burger)
-- Keep the existing top-right burger pattern, **restyled** to parchment (ink lines on paper, no glassmorphism/blur). Dropdown links: **PhaiPhon** (`phaiphon/index.html`). (Approach is future scope; not linked yet.)
-- **No Ctrl+K search** on the homepage (the graph it searched is gone).
+- Unit tests: none added (this is in-place UI/graph work on an untestable inline file). Verification is **visual in a browser** + targeted greps that the dark values are gone.
+- Acceptance: parchment background everywhere; graph legible as muted ink on parchment with no glow; search/tooltip/leader-labels/graph-info all readable in the new theme; new sections + mission present; no `#000`/`#fff`/`rgba(255,255,255,*)`/`rgba(5,5,7,*)`/orange-accent values remain in the themed CSS; no console errors; `prefers-reduced-motion` still respected by existing animations.
 
-## 6. Paper-Airplane Flock Backdrop (behavior spec)
+## 8. Assumptions
 
-A lightweight **2D `<canvas>`** boids simulation — sepia ink paper airplanes drifting across parchment. Replaces Three.js entirely (no WebGL, no bloom).
-
-- **Agents:** ~60 desktop / ~30 mobile (responsive by viewport width). Classic boids: separation, alignment, cohesion + soft edge-wrapping or gentle turn-at-bounds. **Slow** max speed (elegant, not game-like).
-- **Glyph:** a small paper-airplane/dart (~12–18px) drawn as thin `--sepia` ink strokes at low opacity (~0.3–0.5). A few "lead" agents tinted `--sage` (sparingly) for life.
-- **Flap ("flapping airplanes"):** each agent's two wing-halves rotate a few degrees on a sine wave, phase-offset per agent and slightly coupled to turn rate (banking → faster flap). This is the detail that reads as *alive*, not rigid.
-- **Trail:** a short fading polyline behind each agent in its travel direction — echoes the style guide's "butterflies in flight, motion blur" motif.
-- **Non-interactive / ambient.** No pointer steering by default (keeps it contemplative, not a toy).
-- **Reduced motion:** under `prefers-reduced-motion: reduce`, render a single **static "entomological scatter"** of airplanes (no animation) — itself a named style-guide composition mode.
-- **Performance:** single `requestAnimationFrame` loop; pause when `document.hidden`; cap devicePixelRatio at 2; recompute agent count on resize (debounced).
-
-## 7. Technical Approach
-
-- **Vanilla** HTML5 + CSS + JS. **No** build tooling, frameworks, Three.js, or WebGL (matches the no-dependency spirit of the current site, minus the 3D stack).
-- **Focused files** (split from the old single 150KB file for maintainability and testability):
-  - `index.html` — semantic markup of the sections in §5.
-  - `assets/css/site.css` — design-system tokens + layout.
-  - `assets/js/flock.js` — boids module. **Pure simulation functions exported** (e.g. `step(agents, opts)`, `separation/alignment/cohesion`) so the vector math is unit-testable headlessly, plus a `Flock` class that owns the canvas/render/RAF loop.
-  - `assets/js/main.js` — page init: instantiate the flock, scroll-reveal `IntersectionObserver` (respecting reduced motion), burger toggle.
-- **Fonts:** Google Fonts `<link>` for EB Garamond, Inter, IBM Plex Mono (with system fallbacks).
-- **Testing strategy:** the boids vector math in `flock.js` is genuinely unit-testable — tested with Node's built-in `node:test` + `node:assert` (zero new dependencies; assumes Node is available). CSS/layout/visual and the RAF render loop are verified manually in a browser against an explicit checklist (this is design work; red-green TDD applies to the pure logic, not to pixels).
-
-## 8. File Structure (after this work)
-
-```
-phaistos-labs-site/
-├─ index.html                      # NEW parchment homepage (replaces dark one)
-├─ assets/
-│  ├─ css/site.css                 # NEW design system + layout
-│  └─ js/
-│     ├─ flock.js                  # NEW boids module (pure fns + Flock class)
-│     └─ main.js                   # NEW page init
-├─ explore/
-│  └─ index.html                   # PRESERVED old homepage (unlinked, paths fixed)
-├─ test/
-│  └─ flock.test.mjs               # NEW unit tests for boids math
-├─ language_data.js                # untouched (used by explore/)
-├─ phaiphon/                       # untouched
-└─ docs/superpowers/{specs,plans}/ # this spec + the plan
-```
-
-## 9. Accessibility & Performance
-
-- Semantic landmarks (`<header> <main> <section> <footer>`), one `<h1>`, logical heading order.
-- Color contrast: `--ink` on `--paper` and `--ink-2` on `--paper` meet WCAG AA for their sizes; links `--rose` have non-color affordance (underline on hover/focus) and visible focus rings.
-- `prefers-reduced-motion` disables flock animation and scroll-reveal transitions.
-- Backdrop canvas is `aria-hidden`; it carries no information.
-- No render-blocking heavy assets; fonts `display=swap`.
-
-## 10. Assumptions & Open Questions
-
-- **Assumption (flagged):** removing the interactive graph + Ctrl+K search from the homepage is acceptable; preserved unlinked at `explore/index.html`. (If you actually want it live + linked now, that's Approach 3 and expands scope.)
-- **Mission copy and the hero thesis line are placeholders** I drafted; mark for your wording pass.
-- Hero thesis candidates to choose among: (a) “We teach machines to read what no one living can.” (b) “Recovering what history left unread.” (c) “The oldest questions deserve the newest machines.”
-- Serif choice EB Garamond (vs. Spectral) is a default; easy to swap one token.
+- Family color-coding is **kept but muted** (earthy ink), not dropped to pure monochrome. (Easy to switch to monochrome sepia if preferred after seeing it.)
+- Search and other graph interactions are retained (the graph stays interactive).
+- Mission/hero copy are placeholders for the user's wording pass.
