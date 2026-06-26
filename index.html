@@ -929,7 +929,6 @@
       <p>Our first frontier is Minoan Linear A &mdash; the last major undeciphered script of the Bronze Age Mediterranean, the written voice of the civilization remembered as Plato&rsquo;s Atlantis. It is not yet read. That honesty is the method, not a disclaimer.</p>
       <p>If a dead language can be recovered from structure alone, so can other lost knowledge. We are building toward humanistic models that reason about the human record with the rigor we reserve for the natural world.</p>
       <p class="status-tag">NOT YET DECIPHERED &middot; v0 &middot; OPEN</p>
-      <p><a class="cta" href="phaiphon/index.html">See the instrument &mdash; PhaiPhon &rarr;</a></p>
 
       <div class="contact">For more information, reach out to <a href="mailto:alvinxyz@stanford.edu">alvinxyz@stanford.edu</a>, <a href="mailto:aaronbao@berkeley.edu">aaronbao@berkeley.edu</a>, or <a href="mailto:kyriacos@stanford.edu">kyriacos@stanford.edu</a></div>
     </div>
@@ -2634,6 +2633,60 @@
     const edgeMesh = new THREE.LineSegments(edgeGeo, edgeMat);
     worldGroup.add(edgeMesh);
 
+    // Soft ink-bleed layer: stamp soft blots along every edge vertex so the lines
+    // read as bleeding ink strokes, not hard 1px digital lines. Reuses the edge
+    // geometry (position/aColor/aSearchDim); fades in with the graph; respects search.
+    function makeSoftTexture() {
+      const s = 64, c = document.createElement('canvas');
+      c.width = c.height = s;
+      const ctx = c.getContext('2d'), cx = s/2, cy = s/2;
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, s*0.5);
+      g.addColorStop(0, 'rgba(255,255,255,1)');
+      g.addColorStop(0.35, 'rgba(255,255,255,0.55)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, s, s);
+      return new THREE.CanvasTexture(c);
+    }
+    const stampMat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.NormalBlending,
+      uniforms: {
+        uMap: { value: makeSoftTexture() },
+        uSize: { value: 18.0 },
+        uOpacity: { value: 0.30 },
+        uGlobalAlpha: { value: 1.0 },
+      },
+      vertexShader: `
+        attribute vec3 aColor;
+        attribute float aSearchDim;
+        uniform float uSize;
+        varying vec3 vColor;
+        varying float vSearchDim;
+        void main() {
+          vColor = aColor;
+          vSearchDim = aSearchDim;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = uSize * (400.0 / -mv.z);
+          gl_Position = projectionMatrix * mv;
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D uMap;
+        uniform float uOpacity;
+        uniform float uGlobalAlpha;
+        varying vec3 vColor;
+        varying float vSearchDim;
+        void main() {
+          float a = texture2D(uMap, gl_PointCoord).a;
+          a *= uOpacity * uGlobalAlpha * (1.0 - vSearchDim);
+          if (a < 0.01) discard;
+          gl_FragColor = vec4(vColor, a);
+        }
+      `,
+    });
+    const stampPoints = new THREE.Points(edgeGeo, stampMat);
+    worldGroup.add(stampPoints);
+
     // ================================================================
     // AMBIENT PARTICLES
     // ================================================================
@@ -3874,6 +3927,7 @@
       edgeMat.uniforms.uCascadeTime.value = cascadeTime;
       edgeMat.uniforms.uSteadyMix.value = steadyMix;
       edgeMat.uniforms.uGlobalAlpha.value = globalAlpha;
+      stampMat.uniforms.uGlobalAlpha.value = globalAlpha;
       edgeMat.uniforms.uSearchMode.value = searchActive ? 1.0 : 0.0;
       edgeMat.uniforms.uGrowDuration.value = isFirstCascade ? STARTUP_GROW : EDGE_GROW_DUR;
       edgeMat.uniforms.uPulseWaveFront.value = pulseWaveFront;
