@@ -924,19 +924,10 @@
   <!-- Content below the fold -->
   <div id="content">
     <div id="content-inner">
-      <h2>Mission</h2>
-      <p>Phaistos Labs builds AI that recovers lost human knowledge. We begin with the undeciphered scripts of the ancient world &mdash; reconstructing languages from structure alone, without training data &mdash; and treat each decipherment as a step toward a general science of humanistic inference. The work is versioned, falsifiable, and open.</p>
-
-      <h2>What we do</h2>
-      <div class="pillars">
-        <div class="pillar"><h3>Recover</h3><p>Reconstruct lost languages and knowledge from structure alone.</p></div>
-        <div class="pillar"><h3>Generalize</h3><p>Turn each decipherment into a general method for humanistic inference.</p></div>
-        <div class="pillar"><h3>Open</h3><p>Versioned, falsifiable, and shared.</p></div>
-      </div>
-
-      <h2>Our first frontier &mdash; Linear A</h2>
-      <p>Minoan Linear A is the last major undeciphered script of the Bronze Age Mediterranean &mdash; the written voice of the civilization widely regarded as Plato&rsquo;s inspiration for Atlantis. We reconstruct its lost phonology from first principles, without training data, by inducing sound values through phylogenetic constraint propagation across ancient language families.</p>
-      <p>The aim extends beyond a single decipherment: by proving that dead languages can be systematically recovered through pure structural induction, we seek the universal constraints governing human communication &mdash; and humanistic AI models capable of superhuman linguistic inference.</p>
+      <p>Phaistos Labs builds artificial intelligence that recovers lost human knowledge. We begin where the record falls silent &mdash; with the undeciphered scripts of the ancient world &mdash; and read them not by analogy or guesswork, but by inducing their structure from the shape of every language we already know.</p>
+      <p>We treat each decipherment as one instance of a larger question: how much of a lost mind can be reconstructed from its traces alone? The work is patient, versioned, and falsifiable. We publish what holds, and retract what does not.</p>
+      <p>Our first frontier is Minoan Linear A &mdash; the last major undeciphered script of the Bronze Age Mediterranean, the written voice of the civilization remembered as Plato&rsquo;s Atlantis. It is not yet read. That honesty is the method, not a disclaimer.</p>
+      <p>If a dead language can be recovered from structure alone, so can other lost knowledge. We are building toward humanistic models that reason about the human record with the rigor we reserve for the natural world.</p>
       <p class="status-tag">NOT YET DECIPHERED &middot; v0 &middot; OPEN</p>
       <p><a class="cta" href="phaiphon/index.html">See the instrument &mdash; PhaiPhon &rarr;</a></p>
 
@@ -1135,16 +1126,13 @@
       'Koreanic': [0.95, 0.82, 0.52],          // pink-rose
     };
 
+    const VOYNICH_PIGMENTS = [
+      [0.23, 0.42, 0.34], [0.30, 0.30, 0.38], [0.55, 0.34, 0.40], [0.58, 0.40, 0.36],
+      [0.11, 0.55, 0.42], [0.06, 0.52, 0.40], [0.02, 0.50, 0.40], [0.08, 0.42, 0.32],
+      [0.92, 0.30, 0.38],
+    ];
     families.forEach((fam, i) => {
-      if (MAJOR_FAMILY_COLORS[fam]) {
-        FAMILY_COLORS[fam] = MAJOR_FAMILY_COLORS[fam];
-      } else {
-        // Distribute remaining families across warm hue range
-        const hue = (i * 0.618033988749895) % 1; // golden ratio distribution
-        // Keep hues in the warm range (red-orange-pink: 0.9-0.15 wrapping)
-        const warmHue = ((hue * 0.25) + 0.9) % 1;
-        FAMILY_COLORS[fam] = [warmHue, 0.7 + Math.random() * 0.2, 0.4 + Math.random() * 0.15];
-      }
+      FAMILY_COLORS[fam] = VOYNICH_PIGMENTS[i % VOYNICH_PIGMENTS.length];
     });
 
     // ================================================================
@@ -2322,7 +2310,7 @@
     // THREE.JS SCENE
     // ================================================================
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#E2DDD4');
+    scene.background = new THREE.Color('#E7DEC6');
 
     const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 20000);
     camera.position.set(0, 0, 2800);
@@ -2354,7 +2342,7 @@
 
       // Parchment/ink: keep the family hue but force a muted, dark earthy tone
       // so each node reads as tinted ink on light paper.
-      const baseColor = new THREE.Color().setHSL(famColor[0], 0.30, 0.40);
+      const baseColor = new THREE.Color().setHSL(famColor[0], famColor[1], famColor[2]);
 
       // Size: descendant-based
       const size = 2.0 + Math.pow(exp, 1.2) * 14;
@@ -2538,7 +2526,7 @@
       varying float vBounceGlow;
 
       void main() {
-        float baseAlpha = 0.5;
+        float baseAlpha = 0.84;
         float fiberBoost = vFiberAlpha * 0.6;
         float steadyAlpha = baseAlpha + fiberBoost;
 
@@ -2585,8 +2573,8 @@
       // Edge color from source node's family
       const srcFamily = graphData.nodes[edge.sourceIdx].family;
       const fc = FAMILY_COLORS[srcFamily] || [0.0, 0.8, 0.5];
-      _tmpEdgeColor.setHSL(fc[0], 0.22, 0.42);
-      _tmpEdgeColor.multiplyScalar(0.9);
+      _tmpEdgeColor.setHSL(0.07, 0.40, 0.18);
+      _tmpEdgeColor.multiplyScalar(1.0);
       for (let s = 0; s < SEGMENTS_PER_EDGE; s++) {
         const t0 = s / SEGMENTS_PER_EDGE;
         const t1 = (s + 1) / SEGMENTS_PER_EDGE;

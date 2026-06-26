@@ -84,3 +84,11 @@ Headings → EB Garamond; the content overlay gradient (currently fading to `#00
 - Family color-coding is **kept but muted** (earthy ink), not dropped to pure monochrome. (Easy to switch to monochrome sepia if preferred after seeing it.)
 - Search and other graph interactions are retained (the graph stays interactive).
 - Mission/hero copy are placeholders for the user's wording pass.
+
+## 9. Revision 2 — bold iron-gall ink + headingless manifesto (2026-06-26)
+
+User feedback: the muted-ink graph read as "very faded, not striking." Direction shifted to the **Voynich manuscript**. After rendering three live variants (bold mono iron-gall ink; light ink + color nodes; colored-pigment edges), the user chose **bold iron-gall ink**, then asked to push it "a bit bolder."
+
+- **Graph (shipped):** warm vellum scene background `#E7DEC6`; family palette swapped to a `VOYNICH_PIGMENTS` HSL set (nodes carry pigment, revealed on close inspection); **edges are bold iron-gall brown** `setHSL(0.07, 0.40, 0.18)` with `baseAlpha 0.84` — a dark, dense, near-monochrome ink web (the Voynich pen-drawing look). Node sizes back to original.
+- **Content (shipped):** **no headings, no pillar grid** — replaced with four flowing manifesto paragraphs (evocative, minimalist) followed by the status tag, PhaiPhon CTA, and contact line.
+- Page chrome (parchment `#E2DDD4`, serif/mono type, panels) unchanged.
