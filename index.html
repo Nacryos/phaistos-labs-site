@@ -938,15 +938,6 @@
   <div id="tooltip"></div>
   <div id="leader-labels"></div>
 
-  <div id="burger-menu" title="Menu" onclick="document.getElementById('burger-dropdown').classList.toggle('open')">
-    <div class="burger-line"></div>
-    <div class="burger-line"></div>
-    <div class="burger-line"></div>
-  </div>
-  <div id="burger-dropdown">
-    <a href="phaiphon/index.html"><span class="menu-dot"></span>PhaiPhon</a>
-  </div>
-
   <button id="search-toggle" title="Search languages (Ctrl+K)">
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
   </button>
@@ -1045,15 +1036,6 @@
       window._startTypewriter = function() { if (!started) { started = true; type(); } };
       setTimeout(window._startTypewriter, 800);
     })();
-
-    // Burger dropdown: close on click outside
-    document.addEventListener('click', function(e) {
-      const dd = document.getElementById('burger-dropdown');
-      const btn = document.getElementById('burger-menu');
-      if (!dd.contains(e.target) && !btn.contains(e.target)) {
-        dd.classList.remove('open');
-      }
-    });
   </script>
   <script src="language_data.js"></script>
   <script type="importmap">
