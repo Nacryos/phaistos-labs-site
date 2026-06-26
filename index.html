@@ -282,6 +282,63 @@
       color: var(--ink);
       border-color: var(--foxing);
     }
+    /* What-we-do pillars */
+    #content-inner .pillars {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin: 4px 0 56px;
+    }
+    #content-inner .pillar h3 {
+      font-family: var(--serif);
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--sage-deep);
+      margin-bottom: 10px;
+    }
+    #content-inner .pillar p {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--ink-2);
+      margin: 0;
+      opacity: 1;
+      transform: none;
+    }
+    @media (max-width: 640px) {
+      #content-inner .pillars { grid-template-columns: 1fr; gap: 24px; }
+    }
+    /* Linear A status tag + CTA */
+    #content-inner p.status-tag {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      color: var(--sepia);
+      background: var(--paper-deep);
+      border: 1px solid var(--foxing);
+      padding: 7px 12px;
+      border-radius: 999px;
+      margin: 8px 0 28px;
+      line-height: 1.4;
+    }
+    #content-inner a.cta {
+      display: inline-block;
+      font-family: var(--sans);
+      font-weight: 500;
+      font-size: 15px;
+      color: var(--paper);
+      background: var(--rose);
+      text-decoration: none;
+      border: none;
+      padding: 12px 22px;
+      border-radius: 999px;
+      transition: background 0.2s ease;
+    }
+    #content-inner a.cta:hover {
+      background: var(--sage-deep);
+      color: var(--paper);
+      border: none;
+    }
 
     /* Tooltip (unchanged) */
     #tooltip {
@@ -867,9 +924,22 @@
   <!-- Content below the fold -->
   <div id="content">
     <div id="content-inner">
-      <h2>Our Mission</h2>
-      <p>Phaistos Labs is deciphering Minoan Linear A &mdash; the last major undeciphered script of the Bronze Age Mediterranean and the written voice of the civilization widely regarded as Plato&rsquo;s inspiration for Atlantis. We reconstruct lost phonologies from first principles, without training data, by inducing sound values through phylogenetic constraint propagation across ancient language families.</p>
-      <p>Our aim extends beyond a single decipherment: by proving that dead languages can be systematically recovered through pure structural induction, we seek to uncover the universal constraints governing human communication and to pioneer humanistic AI models capable of superhuman linguistic inference.</p>
+      <h2>Mission</h2>
+      <p>Phaistos Labs builds AI that recovers lost human knowledge. We begin with the undeciphered scripts of the ancient world &mdash; reconstructing languages from structure alone, without training data &mdash; and treat each decipherment as a step toward a general science of humanistic inference. The work is versioned, falsifiable, and open.</p>
+
+      <h2>What we do</h2>
+      <div class="pillars">
+        <div class="pillar"><h3>Recover</h3><p>Reconstruct lost languages and knowledge from structure alone.</p></div>
+        <div class="pillar"><h3>Generalize</h3><p>Turn each decipherment into a general method for humanistic inference.</p></div>
+        <div class="pillar"><h3>Open</h3><p>Versioned, falsifiable, and shared.</p></div>
+      </div>
+
+      <h2>Our first frontier &mdash; Linear A</h2>
+      <p>Minoan Linear A is the last major undeciphered script of the Bronze Age Mediterranean &mdash; the written voice of the civilization widely regarded as Plato&rsquo;s inspiration for Atlantis. We reconstruct its lost phonology from first principles, without training data, by inducing sound values through phylogenetic constraint propagation across ancient language families.</p>
+      <p>The aim extends beyond a single decipherment: by proving that dead languages can be systematically recovered through pure structural induction, we seek the universal constraints governing human communication &mdash; and humanistic AI models capable of superhuman linguistic inference.</p>
+      <p class="status-tag">NOT YET DECIPHERED &middot; v0 &middot; OPEN</p>
+      <p><a class="cta" href="phaiphon/index.html">See the instrument &mdash; PhaiPhon &rarr;</a></p>
+
       <div class="contact">For more information, reach out to <a href="mailto:alvinxyz@stanford.edu">alvinxyz@stanford.edu</a>, <a href="mailto:aaronbao@berkeley.edu">aaronbao@berkeley.edu</a>, or <a href="mailto:kyriacos@stanford.edu">kyriacos@stanford.edu</a></div>
     </div>
   </div>
