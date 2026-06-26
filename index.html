@@ -2250,7 +2250,7 @@
     // THREE.JS SCENE
     // ================================================================
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#000000');
+    scene.background = new THREE.Color('#E2DDD4');
 
     const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 20000);
     camera.position.set(0, 0, 2800);
@@ -2258,17 +2258,13 @@
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMapping = THREE.NoToneMapping;
     renderer.toneMappingExposure = 1.0;
     document.getElementById('graph-container').appendChild(renderer.domElement);
 
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
-    const bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(window.innerWidth, window.innerHeight),
-      2.8, 1.1, 0.05
-    );
-    composer.addPass(bloomPass);
+    // Bloom removed for the parchment/ink theme — glow does not belong on paper.
 
     const worldGroup = new THREE.Group();
     scene.add(worldGroup);
@@ -2284,10 +2280,9 @@
       const rec = node.recency;
       const famColor = FAMILY_COLORS[node.family] || [0.0, 0.8, 0.5];
 
-      const baseColor = new THREE.Color().setHSL(famColor[0], famColor[1], famColor[2]);
-      baseColor.lerp(COLOR_CREAM, rec * 0.3 + exp * 0.15);
-      const brightness = 0.65 + rec * 0.35;
-      baseColor.multiplyScalar(brightness);
+      // Parchment/ink: keep the family hue but force a muted, dark earthy tone
+      // so each node reads as tinted ink on light paper.
+      const baseColor = new THREE.Color().setHSL(famColor[0], 0.30, 0.40);
 
       // Size: descendant-based
       const size = 2.0 + Math.pow(exp, 1.2) * 14;
@@ -2471,20 +2466,20 @@
       varying float vBounceGlow;
 
       void main() {
-        float baseAlpha = 0.24;
+        float baseAlpha = 0.5;
         float fiberBoost = vFiberAlpha * 0.6;
         float steadyAlpha = baseAlpha + fiberBoost;
 
         vec3 steadyColor = vEdgeColor;
-        steadyColor = mix(steadyColor, vec3(1.0, 0.88, 0.75), vFiberAlpha * 0.9);
+        steadyColor = mix(steadyColor, vec3(0.40, 0.28, 0.16), vFiberAlpha * 0.9);
 
-        vec3 cascadeColor = vec3(0.95, 0.88, 0.8);
+        vec3 cascadeColor = vec3(0.45, 0.33, 0.20);
 
         // Fiber optic pulses on revealed cascade edges
         float revealFrac = smoothstep(0.1, 0.5, vCascadeAlpha);
         float fiberOnCascade = vFiberAlpha * 1.4 * revealFrac;
         float cascadeWithPulse = vCascadeAlpha + fiberOnCascade;
-        vec3 cascadePulseColor = mix(cascadeColor, vec3(1.0, 0.98, 0.92), vFiberAlpha * revealFrac * 0.95);
+        vec3 cascadePulseColor = mix(cascadeColor, vec3(0.34, 0.24, 0.14), vFiberAlpha * revealFrac * 0.95);
 
         float alpha = mix(cascadeWithPulse, steadyAlpha, vSteadyMix) * vGlobalAlpha;
         vec3 color = mix(cascadePulseColor, steadyColor, vSteadyMix);
@@ -2499,9 +2494,9 @@
         alpha *= vPulseLit;
         color *= vPulseLit;
 
-        // Bounce wave: additive glow traveling inward after main pulse
+        // Bounce wave: a subtle ink darkening traveling inward (no additive glow on paper)
         alpha += vBounceGlow;
-        color += vec3(0.95, 0.88, 0.8) * vBounceGlow;
+        color = mix(color, vec3(0.30, 0.20, 0.12), clamp(vBounceGlow, 0.0, 1.0));
 
         if (alpha < 0.001) discard;
         gl_FragColor = vec4(color, alpha);
@@ -2518,8 +2513,8 @@
       // Edge color from source node's family
       const srcFamily = graphData.nodes[edge.sourceIdx].family;
       const fc = FAMILY_COLORS[srcFamily] || [0.0, 0.8, 0.5];
-      _tmpEdgeColor.setHSL(fc[0], fc[1], fc[2]);
-      _tmpEdgeColor.multiplyScalar(0.55);
+      _tmpEdgeColor.setHSL(fc[0], 0.22, 0.42);
+      _tmpEdgeColor.multiplyScalar(0.9);
       for (let s = 0; s < SEGMENTS_PER_EDGE; s++) {
         const t0 = s / SEGMENTS_PER_EDGE;
         const t1 = (s + 1) / SEGMENTS_PER_EDGE;
@@ -2554,7 +2549,7 @@
       fragmentShader: edgeFS,
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
       uniforms: {
         uTime:           { value: 0 },
         uCascadeTime:    { value: 0 },
@@ -2580,15 +2575,15 @@
       pPos[i*3]   = (Math.random()-0.5) * SPREAD * 4;
       pPos[i*3+1] = (Math.random()-0.5) * SPREAD * 4;
       pPos[i*3+2] = (Math.random()-0.5) * SPREAD * 4;
-      const r = 0.3 + Math.random() * 0.4;
-      pColors[i*3] = r; pColors[i*3+1] = r*0.15; pColors[i*3+2] = r*0.1;
+      const r = 0.3 + Math.random() * 0.3;
+      pColors[i*3] = r*0.5; pColors[i*3+1] = r*0.38; pColors[i*3+2] = r*0.24;
     }
     const pGeo = new THREE.BufferGeometry();
     pGeo.setAttribute('position', new THREE.Float32BufferAttribute(pPos, 3));
     pGeo.setAttribute('color', new THREE.Float32BufferAttribute(pColors, 3));
     const pMat = new THREE.PointsMaterial({
       size: 2, transparent: true, opacity: 0.35,
-      vertexColors: true, blending: THREE.AdditiveBlending, depthWrite: false,
+      vertexColors: true, blending: THREE.NormalBlending, depthWrite: false,
     });
     worldGroup.add(new THREE.Points(pGeo, pMat));
 
@@ -3755,7 +3750,7 @@
         const twinkle = Math.pow(Math.max(0, Math.sin(globalElapsed * ud.twinkleSpeed + ud.twinkleOffset)), 8);
 
         const collapseGlowVal = pulseOverridesCollapse ? 0 : (_collapseGlow.get(i) || 0);
-        mesh.material.color.copy(ud.baseColor).multiplyScalar(1 + twinkle * 2.5 * ud.twinkleBoost * ud.sizeDampen + bangBright + collapseGlowVal);
+        mesh.material.color.copy(ud.baseColor).multiplyScalar(1 + twinkle * 0.1 * ud.twinkleBoost * ud.sizeDampen);
         let scaleMul = 1;
         if (searchActive) {
           // Search mode: each node independently cascade-grows based on its own reveal time
