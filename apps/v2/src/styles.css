@@ -395,6 +395,18 @@ h1 {
   line-height: 0.72;
 }
 
+.mission-initial--elaborate {
+  display: none;
+}
+
+[data-initial="elaborate"] .mission-initial--middle {
+  display: none;
+}
+
+[data-initial="elaborate"] .mission-initial--elaborate {
+  display: block;
+}
+
 [data-initial="classic"] .mission-initial {
   display: none;
 }

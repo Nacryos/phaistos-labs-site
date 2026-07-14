@@ -2,8 +2,8 @@
 
 ## Branch roles
 
-- `master`: current Vercel production source. Leave this on v1 until the redesign is approved.
-- `v2`: integration branch for the redesign and its preview deployments.
+- `master`: current Vercel production source.
+- `v2`: integration branch for redesign work and preview deployments.
 - `legacy/v1`: immutable branch at the final v1 production commit.
 - `v1-production`: immutable tag at the same commit.
 
@@ -12,10 +12,10 @@ Create short-lived feature branches from `v2` when a design experiment should be
 ## Release v2
 
 1. Run `npm run build` and verify the output with `npm run preview`.
-2. Open a pull request from `v2` into `master`.
-3. Confirm that the pull request preview is the approved design.
-4. Merge the pull request. Vercel can then promote the new `master` build to production.
-5. Add a `v2-production` tag to the approved release commit.
+2. Confirm the responsive desktop, tablet, and mobile previews are the approved design.
+3. Fast-forward or merge `v2` into `master` without rewriting history.
+4. Push `master`; Vercel then builds the new production release.
+5. Add a `v2-production` tag to the exact live release commit.
 
 ## Restore v1
 

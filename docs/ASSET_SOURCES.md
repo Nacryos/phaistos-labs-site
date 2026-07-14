@@ -2,7 +2,7 @@
 
 ## Spiral identity
 
-The browser icon is cropped from the user's `Phaistos Logo.png`. The smaller mark above the Phaistos Labs wordmark is a background-removed version of the user's `images.png`; its supplied stroke silhouette is unchanged.
+The browser icon is cropped from the user's `Phaistos Logo.png`. The smaller charcoal mark above the Phaistos Labs wordmark is a background-removed version of the user's `ChatGPT Image Jul 13, 2026, 09_52_49 PM.png`; its supplied spiral-and-dot silhouette and rubbed texture are preserved.
 
 ## Deckled spiral loop
 
@@ -18,7 +18,9 @@ The dragon, butterfly, and bird cutouts were created with an image model from th
 
 ## Illuminated mission initial
 
-The mission paragraph's decorated **A** is a cleaned cutout derived from the *Isny Gradual*, an anonymous parchment manuscript with neumes dated to around 1200. The source reproduction is marked as public domain on [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Isnyer_Graduale_c1200_Initiale_A.jpg). An image model isolated the historical letterform from its blue field; the result was then locally chroma-keyed, cropped, and compressed.
+The default mission **A** is a cleaned cutout from the 11th-century *Cançó de Santa Fe*, written in late Carolingian/Gothic calligraphy. The source crop was dedicated to the public domain on [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Can%C3%A7%C3%B3_de_Santa_Fe_(A_as_an_initial_-_cropped).jpg). An image model isolated the historical letterform from the photographed manuscript ground; the result was then locally chroma-keyed, cropped, and compressed.
+
+The more elaborate comparison initial remains available with `?initial=elaborate`. It derives from the *Isny Gradual*, an anonymous parchment manuscript dated to around 1200. Its source reproduction is marked as public domain on [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Isnyer_Graduale_c1200_Initiale_A.jpg).
 
 ## Linear A sign drawings
 

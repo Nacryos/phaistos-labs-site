@@ -15,7 +15,7 @@ The production v1 source is also preserved in two Git references:
 - Branch: `legacy/v1`
 - Tag: `v1-production`
 
-The `master` branch remains the Vercel production branch until v2 is approved. Work on v2 belongs on the `v2` branch; pushes to it may create Vercel preview deployments but do not replace production.
+The `master` branch is the Vercel production branch. Approved releases are promoted there from `v2`; pushes to `v2` remain preview/integration work and do not replace production. The archived v1 source stays recoverable regardless of which release is live.
 
 ## Local development
 

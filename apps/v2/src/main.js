@@ -1,8 +1,8 @@
 import "./styles.css";
 
 const initialStyle = new URLSearchParams(window.location.search).get("initial");
-if (initialStyle === "classic") {
-  document.documentElement.dataset.initial = "classic";
+if (initialStyle === "classic" || initialStyle === "elaborate") {
+  document.documentElement.dataset.initial = initialStyle;
 }
 
 const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
