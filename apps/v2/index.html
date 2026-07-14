@@ -25,10 +25,6 @@
           <feTurbulence type="fractalNoise" baseFrequency="0.018 0.032" numOctaves="2" seed="19" result="noise" />
           <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.1" xChannelSelector="R" yChannelSelector="G" />
         </filter>
-        <filter id="pigment-wash" x="-12%" y="-12%" width="124%" height="124%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="3" seed="8" result="wash" />
-          <feDisplacementMap in="SourceGraphic" in2="wash" scale="3.2" xChannelSelector="R" yChannelSelector="B" />
-        </filter>
         <filter id="hero-grain-1">
           <feTurbulence type="fractalNoise" baseFrequency="0.86" numOctaves="3" seed="3" stitchTiles="stitch" />
           <feColorMatrix type="saturate" values="0" />
@@ -70,11 +66,20 @@
     </svg>
 
     <main class="codex-page">
+      <div class="background-glyphs" aria-hidden="true">
+        <img class="background-glyph background-glyph--la-1" src="/media/glyphs/linear-a-ab01.webp" alt="">
+        <img class="background-glyph background-glyph--la-2" src="/media/glyphs/linear-a-ab08.webp" alt="">
+        <img class="background-glyph background-glyph--la-3" src="/media/glyphs/linear-a-ab27.webp" alt="">
+        <img class="background-glyph background-glyph--la-4" src="/media/glyphs/linear-a-ab31.webp" alt="">
+        <img class="background-glyph background-glyph--gallows-1" src="/media/glyphs/voynich-gallows-1.webp" alt="">
+        <img class="background-glyph background-glyph--gallows-2" src="/media/glyphs/voynich-gallows-2.webp" alt="">
+      </div>
+
       <section class="hero" aria-labelledby="site-title">
         <div
           class="hero-art"
           role="img"
-          aria-label="Looping collage of hand-made spirals: a nautilus and fern, manuscript rosette, gold sun, inked disc, and galaxy study."
+          aria-label="Looping collage of natural spirals surrounded by a hand-painted butterfly, dragon, and manuscript bird."
         >
           <p class="spiral-equation" aria-hidden="true">r = ae<sup>bθ</sup></p>
 
@@ -100,95 +105,30 @@
             </video>
           </div>
 
-          <div class="cutout cutout--rosette" aria-hidden="true">
-            <svg viewBox="0 0 200 200">
-              <path class="rosette-paper" d="M17 11 54 14 93 8 132 13 181 10 188 43 184 81 190 123 182 187 139 184 101 190 59 185 13 190 16 145 10 106 15 65Z" />
-              <g filter="url(#line-wobble)">
-                <circle class="rosette-ring" cx="100" cy="100" r="78" />
-                <circle class="rosette-ring rosette-ring--faint" cx="100" cy="100" r="67" />
-                <g class="rosette-rays">
-                  <path class="ray ray--lapis" d="M100 94C95 80 87 64 90 42c8 17 13 31 10 52Z" />
-                  <path class="ray ray--madder" d="M100 94C96 81 90 65 95 43c5 18 9 33 5 51Z" transform="rotate(30 100 100)" />
-                  <path class="ray ray--lapis" d="M100 94C95 80 87 64 90 42c8 17 13 31 10 52Z" transform="rotate(60 100 100)" />
-                  <path class="ray ray--madder" d="M100 94C96 81 90 65 95 43c5 18 9 33 5 51Z" transform="rotate(90 100 100)" />
-                  <path class="ray ray--lapis" d="M100 94C95 80 87 64 90 42c8 17 13 31 10 52Z" transform="rotate(120 100 100)" />
-                  <path class="ray ray--madder" d="M100 94C96 81 90 65 95 43c5 18 9 33 5 51Z" transform="rotate(150 100 100)" />
-                  <path class="ray ray--lapis" d="M100 94C95 80 87 64 90 42c8 17 13 31 10 52Z" transform="rotate(180 100 100)" />
-                  <path class="ray ray--madder" d="M100 94C96 81 90 65 95 43c5 18 9 33 5 51Z" transform="rotate(210 100 100)" />
-                  <path class="ray ray--lapis" d="M100 94C95 80 87 64 90 42c8 17 13 31 10 52Z" transform="rotate(240 100 100)" />
-                  <path class="ray ray--madder" d="M100 94C96 81 90 65 95 43c5 18 9 33 5 51Z" transform="rotate(270 100 100)" />
-                  <path class="ray ray--lapis" d="M100 94C95 80 87 64 90 42c8 17 13 31 10 52Z" transform="rotate(300 100 100)" />
-                  <path class="ray ray--madder" d="M100 94C96 81 90 65 95 43c5 18 9 33 5 51Z" transform="rotate(330 100 100)" />
-                </g>
-                <g class="asemic-ring">
-                  <path d="M70 24q5-6 10 0m-7-5 2 10m8-8q7 5 12-1m-4-4-1 10" />
-                  <path d="M70 24q5-6 10 0m-7-5 2 10m8-8q7 5 12-1m-4-4-1 10" transform="rotate(90 100 100)" />
-                  <path d="M70 24q5-6 10 0m-7-5 2 10m8-8q7 5 12-1m-4-4-1 10" transform="rotate(180 100 100)" />
-                  <path d="M70 24q5-6 10 0m-7-5 2 10m8-8q7 5 12-1m-4-4-1 10" transform="rotate(270 100 100)" />
-                </g>
-                <circle class="sun-center" cx="100" cy="100" r="25" />
-                <path class="sun-face" d="M88 95q5-5 10 0m8 0q5-5 9 0m-22 13q8 6 16 0M101 96l-2 9 5 1" />
-                <circle class="sun-cheek" cx="91" cy="103" r="2.2" />
-                <circle class="sun-cheek" cx="112" cy="103" r="2.2" />
-              </g>
-            </svg>
-          </div>
-
-          <div class="cutout cutout--illumination" aria-hidden="true">
-            <svg viewBox="0 0 180 190">
-              <defs>
-                <pattern id="diaper" width="18" height="18" patternUnits="userSpaceOnUse">
-                  <path d="M9 1 17 9 9 17 1 9Z" fill="none" stroke="#dcc27a" stroke-width="1" opacity=".35" />
-                  <circle cx="9" cy="9" r="1.2" fill="#dcc27a" opacity=".55" />
-                </pattern>
-              </defs>
-              <path class="illumination-field" d="M9 7 47 11 92 6 171 10 168 53 174 95 169 181 123 178 79 184 10 179 13 134 6 89Z" />
-              <path class="illumination-pattern" d="M14 12H166V176H14Z" />
-              <path class="illumination-frame" d="M13 10 168 11 166 179 11 177Z" />
-              <g class="illumination-sun" filter="url(#line-wobble)">
-                <path class="sun-rays" d="M90 22q7 16 1 27m28-20q-1 17-13 28m38-7q-10 13-27 14m33 18q-16 6-29-1m26 31q-17-2-27-14m7 37q-14-10-15-27m-18 34q-6-16 1-29m-31 24q2-17 15-27m-38 5q11-13 28-13m-34-20q16-5 30 2m-25-32q17 2 26 15m-5-39q13 11 14 28" />
-                <path class="gold-spiral" d="M91 93c2-9 15-6 14 3-1 14-22 18-31 6-14-18 1-43 24-44 32-1 49 35 34 62-19 35-69 34-91 2-26-39-3-91 42-103" />
-                <circle class="sun-eye" cx="95" cy="91" r="2" />
-              </g>
-            </svg>
-          </div>
-
-          <div class="cutout cutout--disc" aria-hidden="true">
-            <svg viewBox="0 0 150 150">
-              <path class="disc-paper" d="M74 7c31-2 62 19 67 50 6 39-14 76-53 84-36 8-73-15-80-50C1 56 18 18 53 10Z" />
-              <g filter="url(#line-wobble)">
-                <path class="disc-spiral" d="M76 76c1-6 10-6 11 1 2 10-10 17-20 12-15-8-13-30 1-39 21-14 49 2 51 27 3 33-30 56-61 44-39-15-51-65-25-97" />
-                <g class="disc-ticks">
-                  <path d="m33 24 8 7m-20 12 10 4M15 65l11 1M16 89l11-2m-1 25 10-6m7 23 7-9m16 18 2-10m22 9-3-10m25 1-7-9m22-4-9-6m18-12-10-3m15-18-11 1m8-23-10 4m5-24-8 7" />
-                  <circle cx="48" cy="35" r="2.2" />
-                  <circle cx="27" cy="57" r="2" />
-                  <circle cx="30" cy="103" r="2.3" />
-                  <circle cx="61" cy="129" r="2" />
-                  <circle cx="108" cy="121" r="2.3" />
-                  <circle cx="132" cy="83" r="2" />
-                  <circle cx="116" cy="38" r="2.2" />
-                </g>
-              </g>
-            </svg>
-          </div>
-
-          <div class="cutout cutout--galaxy" aria-hidden="true">
-            <svg viewBox="0 0 140 120">
-              <path class="galaxy-paper" d="M8 17 43 9l38 3 47-5 5 37-3 60-43 4-39-2-40 6-3-42Z" />
-              <g filter="url(#line-wobble)">
-                <path class="galaxy-orbit" d="M18 70c17-30 75-46 105-26 24 17-4 50-41 53-31 3-53-15-43-31 12-19 54-24 69-9 9 10-10 23-28 22-15-1-21-10-13-16 8-6 27-5 30 1" />
-                <path class="galaxy-hatch" d="m25 52 8 5m2-15 8 8m4-16 7 10m9-14 4 11m15-12-3 11m21-7-8 10m24 1-11 7M30 83l10-3m6 15 7-10m16 16 3-11m17 10-2-10m20 1-7-8" />
-                <g class="galaxy-stars">
-                  <circle cx="25" cy="66" r="2" />
-                  <circle cx="49" cy="50" r="1.8" />
-                  <circle cx="79" cy="39" r="2.2" />
-                  <circle cx="112" cy="49" r="1.7" />
-                  <circle cx="104" cy="85" r="2" />
-                  <circle cx="61" cy="94" r="1.7" />
-                </g>
-              </g>
-            </svg>
-          </div>
+          <img
+            class="marginal-creature marginal-creature--butterfly"
+            src="/media/marginalia/butterfly.webp"
+            width="320"
+            height="259"
+            alt=""
+            aria-hidden="true"
+          >
+          <img
+            class="marginal-creature marginal-creature--dragon"
+            src="/media/marginalia/dragon.webp"
+            width="258"
+            height="320"
+            alt=""
+            aria-hidden="true"
+          >
+          <img
+            class="marginal-creature marginal-creature--bird"
+            src="/media/marginalia/bird.webp"
+            width="320"
+            height="267"
+            alt=""
+            aria-hidden="true"
+          >
 
           <svg class="collage-grain" viewBox="0 0 460 460" aria-hidden="true">
             <rect class="grain-frame grain-frame--1" width="460" height="460" filter="url(#hero-grain-1)" />
@@ -218,7 +158,14 @@
         </header>
 
         <p class="mission">
-          At Phaistos Labs, we pursue artificial intelligence in the older spirit of inquiry, where the same curiosity can turn from a proof to a poem, from the motion of planets to the memory of a word. As models assume more of mathematics and code, the decisive questions will be translational: insights carried patiently between histories, languages, sciences, and arts. These are not separate territories, but one spiral of knowledge—met again at a deeper turn.
+          <img
+            class="mission-initial"
+            src="/media/marginalia/initial-a.webp"
+            width="280"
+            height="260"
+            alt=""
+            aria-hidden="true"
+          ><span class="visually-hidden">A</span>t Phaistos Labs, we pursue artificial intelligence in the older spirit of inquiry, where the same curiosity can turn from a proof to a poem, from the motion of planets to the memory of a word. As models assume more of mathematics and code, the decisive questions will be translational: insights carried patiently between histories, languages, sciences, and arts. These are not separate territories, but one spiral of knowledge—met again at a deeper turn.
         </p>
 
         <a class="contact-link" href="mailto:alvinxyz@stanford.edu">

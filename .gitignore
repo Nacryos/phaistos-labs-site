@@ -3,3 +3,4 @@ dist/
 .vercel/
 .superpowers/
 *.log
+tmp/
