@@ -1,20 +1,246 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Phaistos Labs explores ancient writing, language, and computation." />
-    <title>Phaistos Labs — V2 workspace</title>
-    <link rel="icon" href="data:," />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+      name="description"
+      content="Phaistos Labs pursues artificial intelligence in the older, humanistic spirit of inquiry—where proofs, poems, sciences, and histories belong to one spiral of knowledge."
+    >
+    <meta name="theme-color" content="#ede5d0">
+    <title>Phaistos Labs — Humanistic AI</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=IBM+Plex+Mono:wght@400&display=swap"
+      rel="stylesheet"
+    >
     <script type="module" src="/src/main.js"></script>
   </head>
   <body>
-    <main class="workspace-shell">
-      <p class="eyebrow">Phaistos Labs</p>
-      <h1>V2 redesign workspace</h1>
-      <p class="intro">
-        The new website will take shape here. The original production site remains preserved and independently restorable.
-      </p>
+    <svg class="filter-definitions" aria-hidden="true">
+      <defs>
+        <filter id="line-wobble" x="-8%" y="-8%" width="116%" height="116%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.018 0.032" numOctaves="2" seed="19" result="noise" />
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.1" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+        <filter id="pigment-wash" x="-12%" y="-12%" width="124%" height="124%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="3" seed="8" result="wash" />
+          <feDisplacementMap in="SourceGraphic" in2="wash" scale="3.2" xChannelSelector="R" yChannelSelector="B" />
+        </filter>
+        <filter id="hero-grain-1">
+          <feTurbulence type="fractalNoise" baseFrequency="0.86" numOctaves="3" seed="3" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <filter id="hero-grain-2">
+          <feTurbulence type="fractalNoise" baseFrequency="0.91" numOctaves="3" seed="13" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <filter id="hero-grain-3">
+          <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="4" seed="27" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <filter id="hero-grain-4">
+          <feTurbulence type="fractalNoise" baseFrequency="0.96" numOctaves="2" seed="41" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+      </defs>
+    </svg>
+
+    <div class="paper-grain" aria-hidden="true">
+      <svg preserveAspectRatio="none" viewBox="0 0 100 100">
+        <filter id="paper-noise">
+          <feTurbulence type="fractalNoise" baseFrequency="0.92" numOctaves="4" seed="31" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <rect width="100" height="100" filter="url(#paper-noise)" />
+      </svg>
+    </div>
+
+    <svg class="spot spot-star spot-star--north" viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M16 2.5 19 11l8.3-2.2-6 6.2 6.4 5.8-8.5-1.6-2.3 8.3-2.7-8.1-8.4 2 6.1-6.1-6.3-5.9 8.5 1.9Z" />
+    </svg>
+    <svg class="spot spot-star spot-star--east" viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M16.5 3.1 19 11.9l8.8-.6-7 5.2 5.2 7.1-8.2-3.2-4.9 7.3.5-8.8-8.5-2.2 8.5-2.3-.7-8.8 5.1 7.2Z" />
+    </svg>
+    <svg class="spot spot-moon" viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M33.2 7.8c-9.7 2.5-15.5 12.4-13 22 1.4 5.5 5.2 9.7 10 11.7-10.7 1.2-20.7-5.7-23.4-16.3C3.7 13.2 11 1 23 .7c3.7-.9 7.4-.6 10.8.6-.2 2.2-.4 4.4-.6 6.5Z" />
+      <circle cx="18" cy="15" r="1.2" />
+    </svg>
+
+    <main class="codex-page">
+      <section class="hero" aria-labelledby="site-title">
+        <div
+          class="hero-art"
+          role="img"
+          aria-label="Looping collage of hand-made spirals: a nautilus and fern, manuscript rosette, gold sun, inked disc, and galaxy study."
+        >
+          <p class="spiral-equation" aria-hidden="true">r = ae<sup>bθ</sup></p>
+
+          <div class="cutout cutout--nature" aria-hidden="true">
+            <img
+              class="nature-poster"
+              src="/media/spiral-collage-poster.webp"
+              width="400"
+              height="400"
+              alt=""
+            >
+            <video
+              class="nature-loop"
+              muted
+              loop
+              playsinline
+              preload="metadata"
+              poster="/media/spiral-collage-poster.webp"
+              disablepictureinpicture
+              tabindex="-1"
+            >
+              <source src="/media/spiral-collage.webm" type="video/webm">
+            </video>
+          </div>
+
+          <div class="cutout cutout--rosette" aria-hidden="true">
+            <svg viewBox="0 0 200 200">
+              <path class="rosette-paper" d="M17 11 54 14 93 8 132 13 181 10 188 43 184 81 190 123 182 187 139 184 101 190 59 185 13 190 16 145 10 106 15 65Z" />
+              <g filter="url(#line-wobble)">
+                <circle class="rosette-ring" cx="100" cy="100" r="78" />
+                <circle class="rosette-ring rosette-ring--faint" cx="100" cy="100" r="67" />
+                <g class="rosette-rays">
+                  <path class="ray ray--lapis" d="M100 94C95 80 87 64 90 42c8 17 13 31 10 52Z" />
+                  <path class="ray ray--madder" d="M100 94C96 81 90 65 95 43c5 18 9 33 5 51Z" transform="rotate(30 100 100)" />
+                  <path class="ray ray--lapis" d="M100 94C95 80 87 64 90 42c8 17 13 31 10 52Z" transform="rotate(60 100 100)" />
+                  <path class="ray ray--madder" d="M100 94C96 81 90 65 95 43c5 18 9 33 5 51Z" transform="rotate(90 100 100)" />
+                  <path class="ray ray--lapis" d="M100 94C95 80 87 64 90 42c8 17 13 31 10 52Z" transform="rotate(120 100 100)" />
+                  <path class="ray ray--madder" d="M100 94C96 81 90 65 95 43c5 18 9 33 5 51Z" transform="rotate(150 100 100)" />
+                  <path class="ray ray--lapis" d="M100 94C95 80 87 64 90 42c8 17 13 31 10 52Z" transform="rotate(180 100 100)" />
+                  <path class="ray ray--madder" d="M100 94C96 81 90 65 95 43c5 18 9 33 5 51Z" transform="rotate(210 100 100)" />
+                  <path class="ray ray--lapis" d="M100 94C95 80 87 64 90 42c8 17 13 31 10 52Z" transform="rotate(240 100 100)" />
+                  <path class="ray ray--madder" d="M100 94C96 81 90 65 95 43c5 18 9 33 5 51Z" transform="rotate(270 100 100)" />
+                  <path class="ray ray--lapis" d="M100 94C95 80 87 64 90 42c8 17 13 31 10 52Z" transform="rotate(300 100 100)" />
+                  <path class="ray ray--madder" d="M100 94C96 81 90 65 95 43c5 18 9 33 5 51Z" transform="rotate(330 100 100)" />
+                </g>
+                <g class="asemic-ring">
+                  <path d="M70 24q5-6 10 0m-7-5 2 10m8-8q7 5 12-1m-4-4-1 10" />
+                  <path d="M70 24q5-6 10 0m-7-5 2 10m8-8q7 5 12-1m-4-4-1 10" transform="rotate(90 100 100)" />
+                  <path d="M70 24q5-6 10 0m-7-5 2 10m8-8q7 5 12-1m-4-4-1 10" transform="rotate(180 100 100)" />
+                  <path d="M70 24q5-6 10 0m-7-5 2 10m8-8q7 5 12-1m-4-4-1 10" transform="rotate(270 100 100)" />
+                </g>
+                <circle class="sun-center" cx="100" cy="100" r="25" />
+                <path class="sun-face" d="M88 95q5-5 10 0m8 0q5-5 9 0m-22 13q8 6 16 0M101 96l-2 9 5 1" />
+                <circle class="sun-cheek" cx="91" cy="103" r="2.2" />
+                <circle class="sun-cheek" cx="112" cy="103" r="2.2" />
+              </g>
+            </svg>
+          </div>
+
+          <div class="cutout cutout--illumination" aria-hidden="true">
+            <svg viewBox="0 0 180 190">
+              <defs>
+                <pattern id="diaper" width="18" height="18" patternUnits="userSpaceOnUse">
+                  <path d="M9 1 17 9 9 17 1 9Z" fill="none" stroke="#dcc27a" stroke-width="1" opacity=".35" />
+                  <circle cx="9" cy="9" r="1.2" fill="#dcc27a" opacity=".55" />
+                </pattern>
+              </defs>
+              <path class="illumination-field" d="M9 7 47 11 92 6 171 10 168 53 174 95 169 181 123 178 79 184 10 179 13 134 6 89Z" />
+              <path class="illumination-pattern" d="M14 12H166V176H14Z" />
+              <path class="illumination-frame" d="M13 10 168 11 166 179 11 177Z" />
+              <g class="illumination-sun" filter="url(#line-wobble)">
+                <path class="sun-rays" d="M90 22q7 16 1 27m28-20q-1 17-13 28m38-7q-10 13-27 14m33 18q-16 6-29-1m26 31q-17-2-27-14m7 37q-14-10-15-27m-18 34q-6-16 1-29m-31 24q2-17 15-27m-38 5q11-13 28-13m-34-20q16-5 30 2m-25-32q17 2 26 15m-5-39q13 11 14 28" />
+                <path class="gold-spiral" d="M91 93c2-9 15-6 14 3-1 14-22 18-31 6-14-18 1-43 24-44 32-1 49 35 34 62-19 35-69 34-91 2-26-39-3-91 42-103" />
+                <circle class="sun-eye" cx="95" cy="91" r="2" />
+              </g>
+            </svg>
+          </div>
+
+          <div class="cutout cutout--disc" aria-hidden="true">
+            <svg viewBox="0 0 150 150">
+              <path class="disc-paper" d="M74 7c31-2 62 19 67 50 6 39-14 76-53 84-36 8-73-15-80-50C1 56 18 18 53 10Z" />
+              <g filter="url(#line-wobble)">
+                <path class="disc-spiral" d="M76 76c1-6 10-6 11 1 2 10-10 17-20 12-15-8-13-30 1-39 21-14 49 2 51 27 3 33-30 56-61 44-39-15-51-65-25-97" />
+                <g class="disc-ticks">
+                  <path d="m33 24 8 7m-20 12 10 4M15 65l11 1M16 89l11-2m-1 25 10-6m7 23 7-9m16 18 2-10m22 9-3-10m25 1-7-9m22-4-9-6m18-12-10-3m15-18-11 1m8-23-10 4m5-24-8 7" />
+                  <circle cx="48" cy="35" r="2.2" />
+                  <circle cx="27" cy="57" r="2" />
+                  <circle cx="30" cy="103" r="2.3" />
+                  <circle cx="61" cy="129" r="2" />
+                  <circle cx="108" cy="121" r="2.3" />
+                  <circle cx="132" cy="83" r="2" />
+                  <circle cx="116" cy="38" r="2.2" />
+                </g>
+              </g>
+            </svg>
+          </div>
+
+          <div class="cutout cutout--galaxy" aria-hidden="true">
+            <svg viewBox="0 0 140 120">
+              <path class="galaxy-paper" d="M8 17 43 9l38 3 47-5 5 37-3 60-43 4-39-2-40 6-3-42Z" />
+              <g filter="url(#line-wobble)">
+                <path class="galaxy-orbit" d="M18 70c17-30 75-46 105-26 24 17-4 50-41 53-31 3-53-15-43-31 12-19 54-24 69-9 9 10-10 23-28 22-15-1-21-10-13-16 8-6 27-5 30 1" />
+                <path class="galaxy-hatch" d="m25 52 8 5m2-15 8 8m4-16 7 10m9-14 4 11m15-12-3 11m21-7-8 10m24 1-11 7M30 83l10-3m6 15 7-10m16 16 3-11m17 10-2-10m20 1-7-8" />
+                <g class="galaxy-stars">
+                  <circle cx="25" cy="66" r="2" />
+                  <circle cx="49" cy="50" r="1.8" />
+                  <circle cx="79" cy="39" r="2.2" />
+                  <circle cx="112" cy="49" r="1.7" />
+                  <circle cx="104" cy="85" r="2" />
+                  <circle cx="61" cy="94" r="1.7" />
+                </g>
+              </g>
+            </svg>
+          </div>
+
+          <svg class="collage-grain" viewBox="0 0 460 460" aria-hidden="true">
+            <rect class="grain-frame grain-frame--1" width="460" height="460" filter="url(#hero-grain-1)" />
+            <rect class="grain-frame grain-frame--2" width="460" height="460" filter="url(#hero-grain-2)" />
+            <rect class="grain-frame grain-frame--3" width="460" height="460" filter="url(#hero-grain-3)" />
+            <rect class="grain-frame grain-frame--4" width="460" height="460" filter="url(#hero-grain-4)" />
+          </svg>
+        </div>
+
+        <header class="identity">
+          <svg class="spiral-mark" viewBox="0 0 96 72" role="img" aria-label="Phaistos Labs spiral mark">
+            <g filter="url(#line-wobble)">
+              <path class="spiral-mark__line" pathLength="1" d="M49 37c1-5 8-5 10 0 3 8-5 15-13 13-13-3-17-19-9-29 12-16 38-11 45 8 10 27-12 52-38 48C13 72 1 35 19 10" />
+              <g class="spiral-mark__ticks">
+                <circle cx="20" cy="10" r="2" />
+                <circle cx="9" cy="26" r="1.8" />
+                <circle cx="10" cy="48" r="2" />
+                <circle cx="25" cy="67" r="1.9" />
+                <circle cx="49" cy="76" r="2" />
+                <circle cx="73" cy="66" r="1.8" />
+                <circle cx="87" cy="48" r="2" />
+                <circle cx="86" cy="25" r="1.9" />
+              </g>
+            </g>
+          </svg>
+          <h1 id="site-title">Phaistos Labs</h1>
+        </header>
+
+        <p class="mission">
+          At Phaistos Labs, we pursue artificial intelligence in the older spirit of inquiry, where the same curiosity can turn from a proof to a poem, from the motion of planets to the memory of a word. As models assume more of mathematics and code, the decisive questions will be translational: insights carried patiently between histories, languages, sciences, and arts. These are not separate territories, but one spiral of knowledge—met again at a deeper turn.
+        </p>
+
+        <a class="contact-link" href="mailto:alvinxyz@stanford.edu">
+          <span>Write to us</span>
+          <span aria-hidden="true">↗</span>
+          <svg viewBox="0 0 126 8" preserveAspectRatio="none" aria-hidden="true">
+            <path pathLength="1" d="M2 5.3c16-2 28 1 43-.4 19-1.8 33 1 51-.7 10-.8 19-.5 28-1.8" />
+          </svg>
+        </a>
+      </section>
+
+      <footer class="colophon">
+        <svg class="ivy ivy--left" viewBox="0 0 94 34" aria-hidden="true">
+          <path class="ivy-stem" d="M91 28C68 28 58 18 43 15 28 12 16 18 3 5" />
+          <path class="ivy-leaf" d="M56 18c-3-11 6-15 14-13 0 8-5 14-14 13ZM36 14C29 7 34 0 42 1c4 6 2 12-6 13ZM20 15C10 14 8 6 12 1c8 2 12 7 8 14Z" />
+        </svg>
+        <span>Phaistos Labs · MMXXVI</span>
+        <svg class="ivy ivy--right" viewBox="0 0 94 34" aria-hidden="true">
+          <path class="ivy-stem" d="M91 28C68 28 58 18 43 15 28 12 16 18 3 5" />
+          <path class="ivy-leaf" d="M56 18c-3-11 6-15 14-13 0 8-5 14-14 13ZM36 14C29 7 34 0 42 1c4 6 2 12-6 13ZM20 15C10 14 8 6 12 1c8 2 12 7 8 14Z" />
+        </svg>
+      </footer>
     </main>
   </body>
 </html>
