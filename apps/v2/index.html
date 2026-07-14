@@ -10,6 +10,7 @@
     <meta name="theme-color" content="#ede5d0">
     <title>Phaistos Labs — Humanistic AI</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="preload" href="/media/marginalia/initial-a.png" as="image" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -160,9 +161,12 @@
         <p class="mission">
           <img
             class="mission-initial"
-            src="/media/marginalia/initial-a.webp"
+            src="/media/marginalia/initial-a.png"
             width="280"
             height="260"
+            loading="eager"
+            decoding="sync"
+            fetchpriority="high"
             alt=""
             aria-hidden="true"
           ><span class="visually-hidden">A</span>t Phaistos Labs, we pursue artificial intelligence in the older spirit of inquiry, where the same curiosity can turn from a proof to a poem, from the motion of planets to the memory of a word. As models assume more of mathematics and code, the decisive questions will be translational: insights carried patiently between histories, languages, sciences, and arts. These are not separate territories, but one spiral of knowledge—met again at a deeper turn.

@@ -269,7 +269,6 @@ body::after {
   position: absolute;
   inset: 0;
   object-fit: cover;
-  mix-blend-mode: multiply;
 }
 
 .nature-poster {
@@ -395,11 +394,11 @@ h1 {
 }
 
 .mission-initial {
+  display: block;
   float: left;
   width: auto;
   height: 5.15em;
   margin: 0.15em 0.28em 0 -0.08em;
-  mix-blend-mode: multiply;
   object-fit: contain;
 }
 
@@ -549,6 +548,26 @@ h1 {
   45% { stroke-dashoffset: -1; }
   46% { stroke-dashoffset: 1; }
   100% { stroke-dashoffset: 0; }
+}
+
+@media (min-width: 900px) {
+  .marginal-creature--butterfly {
+    top: -1%;
+    left: -25%;
+    width: 30%;
+  }
+
+  .marginal-creature--dragon {
+    top: 31%;
+    right: -27%;
+    width: 31%;
+  }
+
+  .marginal-creature--bird {
+    bottom: 0;
+    left: -28%;
+    width: 32%;
+  }
 }
 
 @media (max-width: 760px) {
