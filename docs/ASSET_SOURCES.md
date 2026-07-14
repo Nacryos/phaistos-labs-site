@@ -16,22 +16,26 @@ The dragon, butterfly, and bird cutouts were created with an image model from th
 - `CanticlesSpirals.png`
 - `6C8021223-bill-m--finkD2BA78A8-C110-FC90-A2CD-BD96084CBA45.webp`
 
-## Illuminated mission initial
+## Mission initial studies
 
-The default mission **A** is a cleaned cutout from the 11th-century *Cançó de Santa Fe*, written in late Carolingian/Gothic calligraphy. The source crop was dedicated to the public domain on [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Can%C3%A7%C3%B3_de_Santa_Fe_(A_as_an_initial_-_cropped).jpg). An image model isolated the historical letterform from the photographed manuscript ground; the result was then locally chroma-keyed, cropped, and compressed.
+The live mission uses the original simple Garamond drop cap. Two rejected comparison studies remain stored in `apps/v2/archive/initials/` rather than being shipped to visitors.
 
-The more elaborate comparison initial remains available with `?initial=elaborate`. It derives from the *Isny Gradual*, an anonymous parchment manuscript dated to around 1200. Its source reproduction is marked as public domain on [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Isnyer_Graduale_c1200_Initiale_A.jpg).
+The middle study is a cleaned cutout from the 11th-century *Cançó de Santa Fe*, written in late Carolingian/Gothic calligraphy. The source crop was dedicated to the public domain on [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Can%C3%A7%C3%B3_de_Santa_Fe_(A_as_an_initial_-_cropped).jpg). An image model isolated the historical letterform from the photographed manuscript ground; the result was then locally chroma-keyed, cropped, and compressed.
+
+The elaborate study derives from the *Isny Gradual*, an anonymous parchment manuscript dated to around 1200. Its source reproduction is marked as public domain on [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Isnyer_Graduale_c1200_Initiale_A.jpg).
 
 ## Linear A sign drawings
 
-The four faint Linear A marks are representative sign-occurrence drawings from [SigLA — The Signs of Linear A](https://sigla.phis.me/), by Ester Salgarella and Simon Castellan. SigLA's dataset and drawings are licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). The source drawings were already transparent PNGs; they were cropped, recolored, and compressed without substituting Unicode glyphs.
+The six faint Linear A marks are representative sign-occurrence drawings from [SigLA — The Signs of Linear A](https://sigla.phis.me/), by Ester Salgarella and Simon Castellan. SigLA's dataset and drawings are licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). The source drawings were already transparent PNGs; they were cropped, recolored, and compressed without substituting Unicode glyphs.
 
 - AB01: `PH 31a_17`
 - AB08: `ZA 10b_18`
 - AB27: `HT 10a_8`
 - AB31: `KH 5_11`
+- AB21: `PH 31a_22`
+- AB61: `PH 2_6`
 
-Retrieved 2026-07-13.
+Retrieved 2026-07-13 and 2026-07-14.
 
 ## Voynich gallows marks
 

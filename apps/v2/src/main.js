@@ -1,10 +1,5 @@
 import "./styles.css";
 
-const initialStyle = new URLSearchParams(window.location.search).get("initial");
-if (initialStyle === "classic" || initialStyle === "elaborate") {
-  document.documentElement.dataset.initial = initialStyle;
-}
-
 const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const loop = document.querySelector(".nature-loop");
 
@@ -29,4 +24,24 @@ motionQuery.addEventListener("change", syncMotionPreference);
 
 document.addEventListener("visibilitychange", () => {
   syncMotionPreference(motionQuery);
+});
+
+const marginalCreatures = document.querySelectorAll(".marginal-creature");
+
+function jiggleCreature(creature) {
+  if (motionQuery.matches) return;
+
+  creature.classList.remove("is-jiggling");
+  void creature.offsetWidth;
+  creature.classList.add("is-jiggling");
+}
+
+marginalCreatures.forEach((creature) => {
+  creature.addEventListener("pointerdown", () => jiggleCreature(creature));
+  creature.addEventListener("click", (event) => {
+    if (event.detail === 0) jiggleCreature(creature);
+  });
+  creature.addEventListener("animationend", () => {
+    creature.classList.remove("is-jiggling");
+  });
 });

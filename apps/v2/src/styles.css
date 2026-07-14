@@ -145,7 +145,7 @@ body::after {
   position: absolute;
   display: block;
   width: auto;
-  opacity: 0.075;
+  opacity: 0.09;
   mix-blend-mode: multiply;
 }
 
@@ -177,11 +177,27 @@ body::after {
   transform: rotate(-6deg);
 }
 
+.background-glyph--la-5 {
+  top: 25%;
+  right: clamp(58px, 18vw, 280px);
+  height: 42px;
+  opacity: 0.085;
+  transform: rotate(-11deg);
+}
+
+.background-glyph--la-6 {
+  top: 71%;
+  left: clamp(58px, 18vw, 280px);
+  height: 48px;
+  opacity: 0.08;
+  transform: rotate(8deg);
+}
+
 .background-glyph--gallows-1 {
   top: 46%;
   left: clamp(34px, 13vw, 210px);
   height: 36px;
-  opacity: 0.055;
+  opacity: 0.07;
   transform: rotate(-3deg);
 }
 
@@ -189,7 +205,7 @@ body::after {
   top: 89%;
   left: clamp(64px, 22vw, 350px);
   height: 42px;
-  opacity: 0.05;
+  opacity: 0.065;
   transform: rotate(7deg);
 }
 
@@ -285,34 +301,61 @@ body::after {
 }
 
 .marginal-creature {
+  --rest-angle: 0deg;
   position: absolute;
   z-index: 6;
   display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
   height: auto;
   opacity: 0.9;
+  transform: rotate(var(--rest-angle));
+  transform-origin: center;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.marginal-creature img {
+  display: block;
+  width: 100%;
+  height: auto;
   mix-blend-mode: multiply;
   pointer-events: none;
+  user-select: none;
+}
+
+.marginal-creature:focus-visible {
+  outline: 2px solid var(--madder);
+  outline-offset: 5px;
+}
+
+.marginal-creature.is-jiggling {
+  animation: paper-jiggle 0.82s steps(1, end);
 }
 
 .marginal-creature--butterfly {
+  --rest-angle: -11deg;
   top: 2%;
   left: -13%;
   width: 21%;
-  animation: nudge-butterfly 5s steps(40, end) infinite;
 }
 
 .marginal-creature--dragon {
+  --rest-angle: 8deg;
   top: 33%;
   right: -14%;
   width: 22%;
-  animation: nudge-dragon 5.5s steps(44, end) infinite;
 }
 
 .marginal-creature--bird {
+  --rest-angle: -5deg;
   bottom: 3%;
   left: -14%;
   width: 24%;
-  animation: nudge-bird 4.75s steps(38, end) infinite;
 }
 
 .collage-grain {
@@ -376,55 +419,14 @@ h1 {
   text-wrap: pretty;
 }
 
-.mission-initial {
-  display: block;
-  float: left;
-  width: auto;
-  height: 5.15em;
-  margin: 0.15em 0.28em 0 -0.08em;
-  object-fit: contain;
-}
-
 .mission-initial-classic {
-  display: none;
+  display: block;
   float: left;
   margin: 0.08em 0.12em 0 0;
   color: var(--madder);
   font-size: 4.15em;
   font-weight: 500;
   line-height: 0.72;
-}
-
-.mission-initial--elaborate {
-  display: none;
-}
-
-[data-initial="elaborate"] .mission-initial--middle {
-  display: none;
-}
-
-[data-initial="elaborate"] .mission-initial--elaborate {
-  display: block;
-}
-
-[data-initial="classic"] .mission-initial {
-  display: none;
-}
-
-[data-initial="classic"] .mission-initial-classic {
-  display: block;
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }
 
 .contact-link {
@@ -439,7 +441,7 @@ h1 {
   text-decoration: none;
 }
 
-.contact-link svg {
+.contact-underline {
   position: absolute;
   right: 0;
   bottom: 0.1rem;
@@ -458,8 +460,33 @@ h1 {
   stroke-dashoffset: 0;
 }
 
-.contact-link:hover path {
+.contact-underline path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+.contact-link:hover .contact-underline path {
   animation: redraw-underline 0.48s steps(12, end) forwards;
+}
+
+.contact-arrow {
+  width: 1.45rem;
+  height: 1.1rem;
+  overflow: visible;
+  align-self: center;
+  margin-left: 0.02rem;
+}
+
+.contact-arrow path {
+  stroke-width: 1.45;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw-contact-arrow 0.76s steps(8, end) 0.45s forwards;
+}
+
+.contact-link:hover .contact-arrow path,
+.contact-link:focus-visible .contact-arrow path {
+  animation: redraw-contact-arrow 0.58s steps(8, end) forwards;
 }
 
 .contact-link:focus-visible {
@@ -519,28 +546,15 @@ h1 {
   84% { transform: translate(-1px, 0) rotate(-1.1deg); }
 }
 
-@keyframes nudge-butterfly {
-  0%, 100% { transform: translate(0, 0) rotate(-11deg); }
-  19% { transform: translate(1px, -1px) rotate(-9.8deg); }
-  43% { transform: translate(-1px, 0) rotate(-11.5deg); }
-  68% { transform: translate(0, 1px) rotate(-10.2deg); }
-  86% { transform: translate(1px, 0) rotate(-11.1deg); }
-}
-
-@keyframes nudge-dragon {
-  0%, 100% { transform: translate(0, 0) rotate(8deg); }
-  22% { transform: translate(-1px, 1px) rotate(7.2deg); }
-  47% { transform: translate(1px, 0) rotate(8.6deg); }
-  71% { transform: translate(0, -1px) rotate(7.6deg); }
-  89% { transform: translate(-1px, 0) rotate(8.3deg); }
-}
-
-@keyframes nudge-bird {
-  0%, 100% { transform: translate(0, 0) rotate(-5deg); }
-  18% { transform: translate(1px, 0) rotate(-4.2deg); }
-  41% { transform: translate(0, -1px) rotate(-5.6deg); }
-  66% { transform: translate(-1px, 1px) rotate(-4.7deg); }
-  84% { transform: translate(0, 1px) rotate(-5.2deg); }
+@keyframes paper-jiggle {
+  0%, 100% { transform: translate(0, 0) rotate(var(--rest-angle)); }
+  12.5% { transform: translate(-2px, 1px) rotate(calc(var(--rest-angle) - 2deg)); }
+  25% { transform: translate(2px, -2px) rotate(calc(var(--rest-angle) + 2.8deg)); }
+  37.5% { transform: translate(-1px, -1px) rotate(calc(var(--rest-angle) - 1.5deg)); }
+  50% { transform: translate(2px, 1px) rotate(calc(var(--rest-angle) + 2deg)); }
+  62.5% { transform: translate(-2px, 0) rotate(calc(var(--rest-angle) - 1.2deg)); }
+  75% { transform: translate(1px, -1px) rotate(calc(var(--rest-angle) + 0.8deg)); }
+  87.5% { transform: translate(-1px, 1px) rotate(calc(var(--rest-angle) - 0.4deg)); }
 }
 
 @keyframes grain-cycle {
@@ -552,6 +566,18 @@ h1 {
   0% { stroke-dashoffset: 0; }
   45% { stroke-dashoffset: -1; }
   46% { stroke-dashoffset: 1; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes draw-contact-arrow {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes redraw-contact-arrow {
+  0% { stroke-dashoffset: 0; }
+  42% { stroke-dashoffset: -1; }
+  43% { stroke-dashoffset: 1; }
   100% { stroke-dashoffset: 0; }
 }
 
@@ -616,11 +642,6 @@ h1 {
     line-height: 1.58;
   }
 
-  .mission-initial {
-    height: 4.7em;
-    margin-right: 0.22em;
-  }
-
   .mission-initial-classic {
     font-size: 3.8em;
   }
@@ -650,8 +671,13 @@ h1 {
   }
 
   .background-glyph--la-2,
-  .background-glyph--la-4 {
+  .background-glyph--la-4,
+  .background-glyph--la-5 {
     right: 18px;
+  }
+
+  .background-glyph--la-6 {
+    left: 30px;
   }
 
   .background-glyph--gallows-1 {

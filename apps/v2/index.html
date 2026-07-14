@@ -10,7 +10,6 @@
     <meta name="theme-color" content="#ede5d0">
     <title>Phaistos Labs — Humanistic AI</title>
     <link rel="icon" href="/favicon.png" type="image/png" sizes="128x128">
-    <link rel="preload" href="/media/marginalia/initial-a-middle.png" as="image" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -72,6 +71,8 @@
         <img class="background-glyph background-glyph--la-2" src="/media/glyphs/linear-a-ab08.webp" alt="">
         <img class="background-glyph background-glyph--la-3" src="/media/glyphs/linear-a-ab27.webp" alt="">
         <img class="background-glyph background-glyph--la-4" src="/media/glyphs/linear-a-ab31.webp" alt="">
+        <img class="background-glyph background-glyph--la-5" src="/media/glyphs/linear-a-ab21.webp" alt="">
+        <img class="background-glyph background-glyph--la-6" src="/media/glyphs/linear-a-ab61.webp" alt="">
         <img class="background-glyph background-glyph--gallows-1" src="/media/glyphs/voynich-gallows-1.webp" alt="">
         <img class="background-glyph background-glyph--gallows-2" src="/media/glyphs/voynich-gallows-2.webp" alt="">
       </div>
@@ -106,30 +107,27 @@
             </video>
           </div>
 
-          <img
+          <button
             class="marginal-creature marginal-creature--butterfly"
-            src="/media/marginalia/butterfly.webp"
-            width="320"
-            height="259"
-            alt=""
-            aria-hidden="true"
+            type="button"
+            aria-label="Jiggle the manuscript butterfly"
           >
-          <img
+            <img src="/media/marginalia/butterfly.webp" width="320" height="259" alt="">
+          </button>
+          <button
             class="marginal-creature marginal-creature--dragon"
-            src="/media/marginalia/dragon.webp"
-            width="258"
-            height="320"
-            alt=""
-            aria-hidden="true"
+            type="button"
+            aria-label="Jiggle the manuscript dragon"
           >
-          <img
+            <img src="/media/marginalia/dragon.webp" width="258" height="320" alt="">
+          </button>
+          <button
             class="marginal-creature marginal-creature--bird"
-            src="/media/marginalia/bird.webp"
-            width="320"
-            height="267"
-            alt=""
-            aria-hidden="true"
+            type="button"
+            aria-label="Jiggle the manuscript bird"
           >
+            <img src="/media/marginalia/bird.webp" width="320" height="267" alt="">
+          </button>
 
           <svg class="collage-grain" viewBox="0 0 460 460" aria-hidden="true">
             <rect class="grain-frame grain-frame--1" width="460" height="460" filter="url(#hero-grain-1)" />
@@ -151,35 +149,16 @@
         </header>
 
         <p class="mission">
-          <span class="mission-initial-classic" aria-hidden="true">A</span>
-          <img
-            class="mission-initial mission-initial--middle"
-            src="/media/marginalia/initial-a-middle.png"
-            width="353"
-            height="300"
-            loading="eager"
-            decoding="sync"
-            fetchpriority="high"
-            alt=""
-            aria-hidden="true"
-          >
-          <img
-            class="mission-initial mission-initial--elaborate"
-            src="/media/marginalia/initial-a.png"
-            width="280"
-            height="260"
-            loading="eager"
-            decoding="sync"
-            fetchpriority="high"
-            alt=""
-            aria-hidden="true"
-          ><span class="visually-hidden">A</span>t Phaistos Labs, we pursue artificial intelligence in the older spirit of inquiry, where the same curiosity can turn from a proof to a poem, from the motion of planets to the memory of a word. As models assume more of mathematics and code, the decisive questions will be translational: insights carried patiently between histories, languages, sciences, and arts. These are not separate territories, but one spiral of knowledge—met again at a deeper turn.
+          <span class="mission-initial-classic">A</span>t Phaistos Labs, we pursue artificial intelligence in the older spirit of inquiry, where the same curiosity can turn from a proof to a poem, from the motion of planets to the memory of a word. As models assume more of mathematics and code, the decisive questions will be translational: insights carried patiently between histories, languages, sciences, and arts. These are not separate territories, but one spiral of knowledge—met again at a deeper turn.
         </p>
 
         <a class="contact-link" href="mailto:alvinxyz@stanford.edu">
           <span>Write to us</span>
-          <span aria-hidden="true">↗</span>
-          <svg viewBox="0 0 126 8" preserveAspectRatio="none" aria-hidden="true">
+          <svg class="contact-arrow" viewBox="0 0 25 18" aria-hidden="true">
+            <path pathLength="1" d="M2 15.2C8.2 12.8 14.1 8.5 20.7 3.2" />
+            <path pathLength="1" d="M14.7 3.4c2.2-.4 4.2-.5 6.3-.3-.2 2-.8 4.2-1.8 6.1" />
+          </svg>
+          <svg class="contact-underline" viewBox="0 0 126 8" preserveAspectRatio="none" aria-hidden="true">
             <path pathLength="1" d="M2 5.3c16-2 28 1 43-.4 19-1.8 33 1 51-.7 10-.8 19-.5 28-1.8" />
           </svg>
         </a>
