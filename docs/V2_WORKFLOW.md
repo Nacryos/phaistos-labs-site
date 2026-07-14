@@ -1,0 +1,28 @@
+# V2 development workflow
+
+## Branch roles
+
+- `master`: current Vercel production source. Leave this on v1 until the redesign is approved.
+- `v2`: integration branch for the redesign and its preview deployments.
+- `legacy/v1`: immutable branch at the final v1 production commit.
+- `v1-production`: immutable tag at the same commit.
+
+Create short-lived feature branches from `v2` when a design experiment should be isolated. Merge successful experiments back into `v2` and use Vercel's branch preview to review them.
+
+## Release v2
+
+1. Run `npm run build` and verify the output with `npm run preview`.
+2. Open a pull request from `v2` into `master`.
+3. Confirm that the pull request preview is the approved design.
+4. Merge the pull request. Vercel can then promote the new `master` build to production.
+5. Add a `v2-production` tag to the approved release commit.
+
+## Restore v1
+
+The safest rollback is a pull request that restores the contents of the `v1-production` tag. For inspection or emergency deployment, create a branch directly from the tag:
+
+```bash
+git switch --create restore/v1 v1-production
+```
+
+The same source is also available under `legacy/v1/` on the v2 line of development and can be run with `npm run dev:legacy`.
