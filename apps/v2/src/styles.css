@@ -351,26 +351,9 @@ body::after {
 }
 
 .spiral-mark {
-  width: 62px;
-  height: 47px;
-  overflow: visible;
-  fill: var(--ink);
-}
-
-.spiral-mark__line {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 2.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: draw-spiral 1.2s steps(18, end) 0.18s forwards;
-}
-
-.spiral-mark__ticks {
-  opacity: 0;
-  animation: reveal-ticks 0.25s steps(2, end) 1.28s forwards;
+  display: block;
+  width: 58px;
+  height: auto;
 }
 
 h1 {
@@ -400,6 +383,24 @@ h1 {
   height: 5.15em;
   margin: 0.15em 0.28em 0 -0.08em;
   object-fit: contain;
+}
+
+.mission-initial-classic {
+  display: none;
+  float: left;
+  margin: 0.08em 0.12em 0 0;
+  color: var(--madder);
+  font-size: 4.15em;
+  font-weight: 500;
+  line-height: 0.72;
+}
+
+[data-initial="classic"] .mission-initial {
+  display: none;
+}
+
+[data-initial="classic"] .mission-initial-classic {
+  display: block;
 }
 
 .visually-hidden {
@@ -535,14 +536,6 @@ h1 {
   25%, 100% { opacity: 0; }
 }
 
-@keyframes draw-spiral {
-  to { stroke-dashoffset: 0; }
-}
-
-@keyframes reveal-ticks {
-  to { opacity: 1; }
-}
-
 @keyframes redraw-underline {
   0% { stroke-dashoffset: 0; }
   45% { stroke-dashoffset: -1; }
@@ -616,6 +609,10 @@ h1 {
     margin-right: 0.22em;
   }
 
+  .mission-initial-classic {
+    font-size: 3.8em;
+  }
+
   .spot-star--east {
     display: none;
   }
@@ -676,14 +673,6 @@ h1 {
     scroll-behavior: auto !important;
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
-  }
-
-  .spiral-mark__line {
-    stroke-dashoffset: 0;
-  }
-
-  .spiral-mark__ticks {
-    opacity: 1;
   }
 
   .grain-frame {

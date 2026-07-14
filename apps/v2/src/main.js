@@ -1,5 +1,10 @@
 import "./styles.css";
 
+const initialStyle = new URLSearchParams(window.location.search).get("initial");
+if (initialStyle === "classic") {
+  document.documentElement.dataset.initial = "classic";
+}
+
 const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const loop = document.querySelector(".nature-loop");
 

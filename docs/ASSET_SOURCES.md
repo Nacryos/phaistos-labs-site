@@ -1,5 +1,13 @@
 # Visual asset sources
 
+## Spiral identity
+
+The browser icon is cropped from the user's `Phaistos Logo.png`. The smaller mark above the Phaistos Labs wordmark is a background-removed version of the user's `images.png`; its supplied stroke silhouette is unchanged.
+
+## Deckled spiral loop
+
+The 15 stills in `medieval-renaissance-spirals-initial.gif` were given deterministic, frame-specific deckled masks. Each still has its own torn silhouette, warm exposed-paper rim, small notches, and fine outward fibers. The artwork inside the cutout was not recolored. The original 330/340 ms source cadence is preserved in the five-second WebM loop at 6 fps through held frames, not interpolation.
+
 ## Marginal creatures
 
 The dragon, butterfly, and bird cutouts were created with an image model from the user's manuscript references and then locally chroma-keyed, cropped, and compressed. Reference files supplied in `Downloads`:
