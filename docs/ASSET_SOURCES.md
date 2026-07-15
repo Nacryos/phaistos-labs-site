@@ -4,6 +4,8 @@
 
 The browser icon is cropped from the user's `Phaistos Logo.png`. The smaller charcoal mark above the Phaistos Labs wordmark is a background-removed version of the user's `ChatGPT Image Jul 13, 2026, 09_52_49 PM.png`; its supplied spiral-and-dot silhouette and rubbed texture are preserved.
 
+The Open Graph card in `apps/v2/public/og.png` was created with the built-in image model from those two supplied identity assets, preserving the charcoal spiral and setting the exact `PHAISTOS LABS` wordmark on a sand-warm parchment ground. It is cropped to the standard 1200 × 630 social-preview ratio.
+
 ## Deckled spiral loop
 
 The 15 stills in `medieval-renaissance-spirals-initial.gif` were given deterministic, frame-specific deckled masks. Each still has its own torn silhouette, warm exposed-paper rim, small notches, and fine outward fibers. The artwork inside the cutout was not recolored. The original 330/340 ms source cadence is preserved in the five-second WebM loop at 6 fps through held frames, not interpolation.
