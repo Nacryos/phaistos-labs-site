@@ -557,6 +557,20 @@ h1 {
   87.5% { transform: translate(-1px, 1px) rotate(calc(var(--rest-angle) - 0.4deg)); }
 }
 
+@keyframes creature-orbit-clockwise {
+  0%, 100% { transform: translate(0, -7px) rotate(var(--rest-angle)); }
+  24% { transform: translate(11px, -1px) rotate(calc(var(--rest-angle) + 1deg)); }
+  51% { transform: translate(2px, 8px) rotate(calc(var(--rest-angle) + 0.2deg)); }
+  76% { transform: translate(-9px, 2px) rotate(calc(var(--rest-angle) - 0.9deg)); }
+}
+
+@keyframes creature-orbit-counterclockwise {
+  0%, 100% { transform: translate(2px, -6px) rotate(var(--rest-angle)); }
+  23% { transform: translate(-10px, 0) rotate(calc(var(--rest-angle) - 0.9deg)); }
+  49% { transform: translate(-2px, 9px) rotate(calc(var(--rest-angle) + 0.2deg)); }
+  74% { transform: translate(11px, 2px) rotate(calc(var(--rest-angle) + 1deg)); }
+}
+
 @keyframes grain-cycle {
   0%, 24.9% { opacity: 0.72; }
   25%, 100% { opacity: 0; }
@@ -583,21 +597,24 @@ h1 {
 
 @media (min-width: 900px) {
   .marginal-creature--butterfly {
-    top: -1%;
-    left: -25%;
-    width: 30%;
+    top: -3%;
+    left: calc(-30% - clamp(22px, 3vw, 44px));
+    width: 28%;
+    animation: creature-orbit-clockwise 17s steps(18, end) -3s infinite;
   }
 
   .marginal-creature--dragon {
-    top: 31%;
-    right: -27%;
-    width: 31%;
+    top: 30%;
+    right: calc(-32% - clamp(20px, 3vw, 46px));
+    width: 29%;
+    animation: creature-orbit-counterclockwise 19s steps(20, end) -8s infinite;
   }
 
   .marginal-creature--bird {
-    bottom: 0;
-    left: -28%;
-    width: 32%;
+    bottom: -1%;
+    left: calc(-31% - clamp(18px, 2.5vw, 38px));
+    width: 30%;
+    animation: creature-orbit-counterclockwise 21s steps(22, end) -13s infinite;
   }
 }
 
@@ -720,6 +737,11 @@ h1 {
   .grain-frame--1 {
     display: block;
     opacity: 0.22;
+  }
+
+  .marginal-creature {
+    animation: none !important;
+    transform: rotate(var(--rest-angle));
   }
 }
 
