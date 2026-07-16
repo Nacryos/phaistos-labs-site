@@ -3,6 +3,11 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+      if (["phaistoslabs.com", "www.phaistoslabs.com"].includes(window.location.hostname)) {
+        document.documentElement.dataset.presentationScale = "production";
+      }
+    </script>
     <meta
       name="description"
       content="Phaistos Labs pursues artificial intelligence in the older, humanistic spirit of inquiry—where proofs, poems, sciences, and histories belong to one spiral of knowledge."

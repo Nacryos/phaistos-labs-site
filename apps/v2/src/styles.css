@@ -685,6 +685,13 @@ h1 {
 }
 
 @media (min-width: 900px) {
+  html[data-presentation-scale="production"] .codex-page {
+    width: 85.4701%;
+    margin-inline: auto;
+    transform: scale(1.17);
+    transform-origin: top center;
+  }
+
   .marginal-creature--butterfly {
     top: -3%;
     left: calc(-30% - clamp(22px, 3vw, 44px));
@@ -708,6 +715,19 @@ h1 {
 }
 
 @media (max-width: 760px) {
+  /* Keep a fully painted poster in memory on mobile. This avoids compositor
+     eviction of the animated sprite and SVG turbulence after a scroll. */
+  .nature-loop,
+  .collage-grain,
+  .paper-grain {
+    display: none;
+  }
+
+  .cutout--nature {
+    animation: none;
+    transform: rotate(-1.5deg);
+  }
+
   .codex-page {
     padding-right: 1.25rem;
     padding-left: 1.25rem;
