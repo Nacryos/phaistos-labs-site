@@ -444,11 +444,46 @@ h1 {
 .mission {
   width: min(100%, 640px);
   margin: clamp(2.2rem, 4vh, 3rem) auto 0;
-  font-size: clamp(1.2rem, 1.7vw, 1.34rem);
+  font-size: clamp(1.04rem, 1.45vw, 1.15rem);
   font-weight: 400;
   line-height: 1.62;
-  text-align: left;
+  hyphens: auto;
+  text-align: justify;
+  text-align-last: left;
+  text-justify: inter-word;
   text-wrap: pretty;
+}
+
+.mission p {
+  margin: 0;
+}
+
+.mission p + p {
+  margin-top: 1.15em;
+}
+
+.mission-underlined {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 0.08em;
+  white-space: nowrap;
+}
+
+.mission-underlined svg {
+  position: absolute;
+  right: -0.02em;
+  bottom: -0.18em;
+  left: -0.02em;
+  width: calc(100% + 0.04em);
+  height: 0.42em;
+  overflow: visible;
+}
+
+.mission-underlined path {
+  fill: none;
+  stroke: var(--madder);
+  stroke-width: 1.4;
+  stroke-linecap: round;
 }
 
 .mission-initial-classic {
@@ -710,7 +745,7 @@ h1 {
   }
 
   .mission {
-    font-size: 1.16rem;
+    font-size: 1.04rem;
     line-height: 1.58;
   }
 
