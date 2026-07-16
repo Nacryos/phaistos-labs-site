@@ -401,10 +401,34 @@ body::after {
   margin-top: clamp(0.85rem, 2.2vh, 1.5rem);
 }
 
+.spiral-mark-control {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  line-height: 0;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.spiral-mark-control:focus-visible {
+  outline: 2px solid var(--madder);
+  outline-offset: 5px;
+}
+
 .spiral-mark {
   display: block;
   width: 58px;
   height: auto;
+  opacity: 0.68;
+  transform-origin: center;
+  user-select: none;
+}
+
+.spiral-mark-control.is-spinning .spiral-mark {
+  animation: spiral-mark-spin 1.05s steps(18, end);
 }
 
 h1 {
@@ -581,6 +605,11 @@ h1 {
   80% { background-position: 0 85.714286%; }
   86.666% { background-position: 0 92.857143%; }
   93.333%, 100% { background-position: 0 100%; }
+}
+
+@keyframes spiral-mark-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 @keyframes creature-orbit-clockwise {

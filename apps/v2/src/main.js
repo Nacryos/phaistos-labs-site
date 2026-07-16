@@ -28,3 +28,23 @@ marginalCreatures.forEach((creature) => {
     creature.classList.remove("is-jiggling");
   });
 });
+
+const spiralMarkControl = document.querySelector(".spiral-mark-control");
+
+function spinSpiralMark() {
+  if (!spiralMarkControl || motionQuery.matches) return;
+
+  spiralMarkControl.classList.remove("is-spinning");
+  void spiralMarkControl.offsetWidth;
+  spiralMarkControl.classList.add("is-spinning");
+}
+
+if (spiralMarkControl) {
+  spiralMarkControl.addEventListener("pointerdown", spinSpiralMark);
+  spiralMarkControl.addEventListener("click", (event) => {
+    if (event.detail === 0) spinSpiralMark();
+  });
+  spiralMarkControl.addEventListener("animationend", () => {
+    spiralMarkControl.classList.remove("is-spinning");
+  });
+}
