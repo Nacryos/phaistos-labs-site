@@ -275,10 +275,9 @@ body::after {
   left: 17%;
   width: 67%;
   aspect-ratio: 1;
-  border: 1px solid rgba(58, 49, 38, 0.34);
   clip-path: polygon(2% 4%, 16% 2%, 31% 3.5%, 47% 1%, 65% 3%, 81% 2%, 98% 5%, 97% 21%, 99% 38%, 97% 55%, 99% 71%, 96% 97%, 78% 98%, 62% 96%, 45% 99%, 28% 97%, 3% 98%, 2% 81%, 4% 63%, 1% 45%, 3% 28%);
   animation: nudge-nature 4s steps(32, end) infinite;
-  background: var(--paper-shade);
+  background: transparent;
 }
 
 .nature-poster,
