@@ -262,7 +262,8 @@ body::after {
 }
 
 .cutout img,
-.cutout video {
+.cutout video,
+.cutout .nature-sprite {
   display: block;
   width: 100%;
   height: 100%;
@@ -295,9 +296,16 @@ body::after {
   z-index: 1;
 }
 
-[data-video="poster"] .nature-loop,
 [data-motion="reduced"] .nature-loop {
   display: none;
+}
+
+.nature-sprite {
+  background-image: url("/media/spiral-collage-deckled-sprite.webp");
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  background-size: 100% 1500%;
+  animation: spiral-sprite-cycle 5s steps(1, end) infinite;
 }
 
 .marginal-creature {
@@ -555,6 +563,24 @@ h1 {
   62.5% { transform: translate(-2px, 0) rotate(calc(var(--rest-angle) - 1.2deg)); }
   75% { transform: translate(1px, -1px) rotate(calc(var(--rest-angle) + 0.8deg)); }
   87.5% { transform: translate(-1px, 1px) rotate(calc(var(--rest-angle) - 0.4deg)); }
+}
+
+@keyframes spiral-sprite-cycle {
+  0% { background-position: 0 0%; }
+  6.666% { background-position: 0 7.142857%; }
+  13.333% { background-position: 0 14.285714%; }
+  20% { background-position: 0 21.428571%; }
+  26.666% { background-position: 0 28.571429%; }
+  33.333% { background-position: 0 35.714286%; }
+  40% { background-position: 0 42.857143%; }
+  46.666% { background-position: 0 50%; }
+  53.333% { background-position: 0 57.142857%; }
+  60% { background-position: 0 64.285714%; }
+  66.666% { background-position: 0 71.428571%; }
+  73.333% { background-position: 0 78.571429%; }
+  80% { background-position: 0 85.714286%; }
+  86.666% { background-position: 0 92.857143%; }
+  93.333%, 100% { background-position: 0 100%; }
 }
 
 @keyframes creature-orbit-clockwise {

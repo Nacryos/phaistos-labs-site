@@ -35,6 +35,13 @@
     <link rel="canonical" href="https://phaistoslabs.com/">
     <title>Phaistos Labs</title>
     <link rel="icon" href="/favicon.png" type="image/png" sizes="128x128">
+    <link
+      rel="preload"
+      href="/media/spiral-collage-deckled-sprite.webp"
+      as="image"
+      type="image/webp"
+      fetchpriority="high"
+    >
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -118,18 +125,7 @@
               height="400"
               alt=""
             >
-            <video
-              class="nature-loop"
-              muted
-              loop
-              playsinline
-              preload="metadata"
-              poster="/media/spiral-collage-deckled-poster.webp"
-              disablepictureinpicture
-              tabindex="-1"
-            >
-              <source src="/media/spiral-collage-deckled.webm" type="video/webm">
-            </video>
+            <span class="nature-loop nature-sprite"></span>
           </div>
 
           <button
