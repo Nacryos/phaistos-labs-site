@@ -692,6 +692,14 @@ h1 {
     transform-origin: top center;
   }
 
+  html[data-presentation-scale="production"] h1 {
+    font-size: clamp(1.8rem, 3.45vw, 2.3rem);
+  }
+
+  html[data-presentation-scale="production"] .mission {
+    font-size: clamp(1.17rem, 1.67vw, 1.3rem);
+  }
+
   .marginal-creature--butterfly {
     top: -3%;
     left: calc(-30% - clamp(22px, 3vw, 44px));
