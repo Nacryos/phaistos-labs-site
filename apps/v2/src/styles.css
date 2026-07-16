@@ -732,8 +732,20 @@ h1 {
   }
 
   .cutout--nature {
+    top: 10%;
+    left: 10%;
+    width: 80%;
     animation: none;
     transform: rotate(-1.5deg);
+  }
+
+  .hero {
+    min-height: calc(100svh - max(3.2rem, 7vh));
+  }
+
+  .marginal-creature,
+  .spiral-equation {
+    display: none;
   }
 
   .codex-page {
@@ -743,10 +755,6 @@ h1 {
 
   .hero-art {
     width: min(94vw, 430px);
-  }
-
-  .spiral-equation {
-    left: 0;
   }
 
   .mission {
