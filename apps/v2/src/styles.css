@@ -503,7 +503,7 @@ h1 {
   margin-top: clamp(1.9rem, 3.5vh, 2.7rem);
   padding: 0.22rem 0.08rem 0.38rem;
   color: var(--ink);
-  font-size: 1.12rem;
+  font-size: clamp(1.04rem, 1.45vw, 1.15rem);
   text-decoration: none;
 }
 
@@ -696,7 +696,8 @@ h1 {
     font-size: clamp(1.9rem, 3.62vw, 2.42rem);
   }
 
-  html[data-presentation-scale="production"] .mission {
+  html[data-presentation-scale="production"] .mission,
+  html[data-presentation-scale="production"] .contact-link {
     font-size: clamp(1.17rem, 1.67vw, 1.3rem);
   }
 
