@@ -733,15 +733,29 @@ h1 {
   }
 
   .cutout--nature {
-    top: 10%;
-    left: 10%;
-    width: 80%;
+    top: 12%;
+    left: 14%;
+    width: 72%;
     animation: none;
     transform: rotate(-1.5deg);
   }
 
   .hero {
     min-height: calc(100svh - max(3.2rem, 7vh));
+  }
+
+  .identity {
+    position: absolute;
+    bottom: clamp(1.8rem, 8svh, 4rem);
+    margin-top: 0;
+  }
+
+  .spiral-mark {
+    width: 72px;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 8vw, 2.45rem);
   }
 
   .spiral-equation {
