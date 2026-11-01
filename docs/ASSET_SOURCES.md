@@ -2,7 +2,7 @@
 
 ## Spiral identity
 
-The browser icon is cropped from the user's `Phaistos Logo.png`. `favicon-ios.svg` embeds that original artwork inside a continuous rounded-square clipping path, with transparent corners for an iOS app-icon silhouette. The smaller charcoal mark above the Phaistos Labs wordmark is a background-removed version of the user's `ChatGPT Image Jul 13, 2026, 09_52_49 PM.png`; its supplied spiral-and-dot silhouette and rubbed texture are preserved.
+The browser icon is cropped from the user's `Phaistos Logo.png`. `favicon-ios.svg` embeds that original artwork inside a continuous rounded-square clipping path, with transparent corners for an iOS app-icon silhouette. The source image is centered at 110 × 110 within the 128 × 128 icon, so the charcoal mark spans about 75% of the tile, guided by the padding in the ChatGPT and Claude app icons. A matching parchment gradient extends the background, with a short feather at the source image edges. `favicon.png` is rendered from that SVG. The smaller charcoal mark above the Phaistos Labs wordmark is a background-removed version of the user's `ChatGPT Image Jul 13, 2026, 09_52_49 PM.png`; its supplied spiral-and-dot silhouette and rubbed texture are preserved.
 
 The Open Graph card in `apps/v2/public/og.png` was created with the built-in image model from those two supplied identity assets, preserving the charcoal spiral and setting the exact `PHAISTOS LABS` wordmark on a sand-warm parchment ground. It is cropped to the standard 1200 × 630 social-preview ratio.
 
