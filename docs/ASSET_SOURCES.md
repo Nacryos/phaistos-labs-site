@@ -18,6 +18,12 @@ The dragon, butterfly, and bird cutouts were created with an image model from th
 - `CanticlesSpirals.png`
 - `6C8021223-bill-m--finkD2BA78A8-C110-FC90-A2CD-BD96084CBA45.webp`
 
+Their motion (`*-frames.webp`, and `*-frames-sm.webp` at half size for phones) was made from these same three cutouts in the
+alvin-site creatures lab: wing beats for all three and a fire breath for the dragon, every frame checked so the still body is
+identical in all of them and only wings, tail, legs and flame move. `scripts/marginal-sprites.py` packs the frames into one
+row per creature; `main.js` plays them in place over the stills once the page has loaded (the dragon breathes fire every
+three to six beats), pauses them when the hero is off screen, and leaves the stills for reduced motion.
+
 ## Mission initial studies
 
 The live mission uses the original simple Garamond drop cap. Two rejected comparison studies remain stored in `apps/v2/archive/initials/` rather than being shipped to visitors.

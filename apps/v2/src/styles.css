@@ -335,6 +335,32 @@ body::after {
   user-select: none;
 }
 
+/* the creature's wing beats (and the dragon's fire), played in place over the still cutout once its frames have loaded
+   (main.js sets its box and frame); the still stays underneath for the first paint and for reduced motion */
+.creature-frames {
+  position: absolute;
+  display: none;
+  background-repeat: no-repeat;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.marginal-creature.is-animated img {
+  visibility: hidden;
+}
+
+.marginal-creature.is-animated .creature-frames {
+  display: block;
+}
+
+[data-motion="reduced"] .marginal-creature.is-animated img {
+  visibility: visible;
+}
+
+[data-motion="reduced"] .marginal-creature .creature-frames {
+  display: none;
+}
+
 .marginal-creature:focus-visible {
   outline: 2px solid var(--madder);
   outline-offset: 5px;
@@ -646,6 +672,12 @@ h1 {
   to { transform: rotate(360deg); }
 }
 
+@keyframes creature-drift {
+  0%, 100% { transform: translate(0, -2px) rotate(var(--rest-angle)); }
+  34% { transform: translate(2px, 1px) rotate(calc(var(--rest-angle) + 0.6deg)); }
+  67% { transform: translate(-2px, 1px) rotate(calc(var(--rest-angle) - 0.5deg)); }
+}
+
 @keyframes creature-orbit-clockwise {
   0%, 100% { transform: translate(0, -7px) rotate(var(--rest-angle)); }
   24% { transform: translate(11px, -1px) rotate(calc(var(--rest-angle) + 1deg)); }
@@ -682,6 +714,20 @@ h1 {
   42% { stroke-dashoffset: -1; }
   43% { stroke-dashoffset: 1; }
   100% { stroke-dashoffset: 0; }
+}
+
+@media (max-width: 899px) {
+  .marginal-creature--butterfly {
+    animation: creature-drift 9s steps(10, end) -2s infinite;
+  }
+
+  .marginal-creature--dragon {
+    animation: creature-drift 11s steps(12, end) -5s infinite reverse;
+  }
+
+  .marginal-creature--bird {
+    animation: creature-drift 10s steps(11, end) -7s infinite;
+  }
 }
 
 @media (min-width: 900px) {
